@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Profile — OncoVision AI</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="darkmode.js"></script>
+  <style>body{visibility:hidden;}</style>
+  <script>
+    function _authGuard() {
+      fetch('/api/check-auth', {credentials:'include', cache:'no-store'})
+        .then(r => r.json())
+        .then(d => {
+          if (!d.logged_in) { window.location.replace('/login'); }
+          else { document.body.style.visibility = 'visible'; }
+        })
+        .catch(() => { window.location.replace('/login'); });
+    }
+    _authGuard();
+    window.addEventListener('pageshow', function(e) { if (e.persisted) location.reload(); });
+  </script>
+
+  <style>
+    .page-header {
+      padding: 3.5rem 0 2.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 3rem;
+    }
+    .page-header h1 {
+      font-family: var(--font-serif);
+      font-size: 2.6rem;
+      margin-bottom: 0.6rem;
+    }
+    .page-header p { color: var(--text-muted); font-size: 1rem; }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      padding-bottom: 5rem;
+    }
+
+    .profile-card {
+      background: var(--card-bg, white);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      padding: 2rem;
+    }
+
+    .profile-card h2 {
+      font-family: var(--font-serif);
+      font-size: 1.4rem;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+
+    .profile-card .card-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.8rem;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .form-group { margin-bottom: 1.2rem; }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      font-family: var(--font-sans, sans-serif);
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      font-family: var(--font-sans, sans-serif);
+      outline: none;
+      background: var(--field-bg, white);
+      color: var(--text);
+    }
+
+    .form-group input:focus,
+    .form-group select:focus { border-color: var(--pink); }
+
+    .form-group input:disabled {
+      background: var(--field-disabled, #f9f9f9);
+      color: var(--text-muted);
+      cursor: not-allowed;
+    }
+
+    .save-btn {
+      width: 100%;
+      padding: 0.85rem;
+      background: var(--pink);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--font-sans, sans-serif);
+      margin-top: 0.5rem;
+      transition: background 0.2s;
+    }
+
+    .save-btn:hover { background: #b05568; }
+    .save-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .msg {
+      font-size: 0.85rem;
+      font-family: var(--font-sans, sans-serif);
+      padding: 0.7rem 0.9rem;
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .msg.success { background: #f0fdf4; color: #16a34a; border-left: 3px solid #16a34a; }
+    .msg.error   { background: #fff0f2; color: #dc2626; border-left: 3px solid #dc2626; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-mini {
+      background: var(--pink-light);
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      text-align: center;
+    }
+
+    .stat-mini__num {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      color: var(--pink);
+      line-height: 1;
+      margin-bottom: 0.3rem;
+    }
+
+    .stat-mini__label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .pwd-strength {
+      font-size: 0.8rem;
+      margin-top: 0.3rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .danger-card {
+      grid-column: 1 / -1;
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid #fecaca;
+      padding: 2rem;
+    }
+
+    .danger-card h2 {
+      font-family: var(--font-serif);
+      font-size: 1.4rem;
+      margin-bottom: 0.4rem;
+      color: #dc2626;
+    }
+
+    .danger-card .card-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid #fecaca;
+    }
+
+    .delete-btn {
+      padding: 0.75rem 1.75rem;
+      background: white;
+      color: #dc2626;
+      border: 1.5px solid #dc2626;
+      border-radius: var(--radius);
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-sans, sans-serif);
+    }
+
+    .delete-btn:hover { background: #dc2626; color: white; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 500;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: white; border-radius: var(--radius-lg);
+      padding: 2rem; width: 100%; max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-box h3 {
+      font-family: var(--font-serif); font-size: 1.3rem;
+      color: #dc2626; margin-bottom: 0.5rem;
+    }
+    .modal-box p { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1.25rem; }
+    .modal-box input {
+      width: 100%; padding: 0.7rem 0.9rem;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.92rem; outline: none; box-sizing: border-box;
+      background: white; color: var(--text);
+    }
+    .modal-box input:focus { border-color: #dc2626; }
+    .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; justify-content: flex-end; }
+    .modal-cancel { background: #f3f4f6; color: #374151; border: none; border-radius: var(--radius); padding: 0.65rem 1.25rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .modal-confirm { background: #dc2626; color: white; border: none; border-radius: var(--radius); padding: 0.65rem 1.25rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+    .modal-confirm:hover { background: #b91c1c; }
+    .modal-msg { font-size: 0.82rem; margin-top: 0.75rem; padding: 0.5rem 0.75rem; border-radius: 6px; display: none; }
+    .modal-msg.error { background: #fff0f2; color: #dc2626; display: block; }
+
+    [data-theme="dark"] .danger-card { background: #1a0e13; border-color: #4a1528; }
+    [data-theme="dark"] .danger-card .card-subtitle { border-color: #4a1528; }
+    [data-theme="dark"] .delete-btn { background: transparent; }
+    [data-theme="dark"] .delete-btn:hover { background: #dc2626; }
+    [data-theme="dark"] .modal-box { background: #1a0e13; }
+    [data-theme="dark"] .modal-box input { background: #0f0a0d; border-color: var(--border); }
+    [data-theme="dark"] .modal-cancel { background: #2a0f18; color: var(--text-muted); }
+
+    /* ── DARK MODE ── */
+    [data-theme="dark"] {
+      --card-bg:       #1a0e13;
+      --field-bg:      #0f0a0d;
+      --field-disabled:#160b10;
+    }
+
+    [data-theme="dark"] .form-group select option {
+      background: #1a0e13;
+      color: var(--text);
+    }
+
+    [data-theme="dark"] .modal-box input {
+      background: #0f0a0d;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    @media (max-width: 768px) {
+      .profile-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav" id="mainNav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">OncoVision AI</a>
+    <ul class="nav__links" id="navLinks">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li data-auth="true"><a href="history.html">History</a></li>
+      <li data-auth="true"><a href="analytics.html">Analytics</a></li>
+      <li data-auth="true"><a href="profile.html" class="active">Profile</a></li>
+      <ul id="dynamicNav" style="display:contents;"></ul>
+      <li><a href="analyze.html" class="nav__cta">Analyze Image</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1 id="pageTitle">My Profile</h1>
+    <p id="pageSubtitle">Manage your account details and security settings.</p>
+  </div>
+
+  <div class="stats-row" id="statsRow" style="display:none;">
+    <div class="stat-mini">
+      <div class="stat-mini__num" id="statTotal">0</div>
+      <div class="stat-mini__label">Total Analyses</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini__num" id="statMal">0</div>
+      <div class="stat-mini__label">Malignant</div>
+    </div>
+    <div class="stat-mini">
+      <div class="stat-mini__num" id="statBen">0</div>
+      <div class="stat-mini__label">Benign</div>
+    </div>
+  </div>
+
+  <div class="profile-grid">
+
+    <!-- ACCOUNT DETAILS -->
+    <div class="profile-card">
+      <h2>Account Details</h2>
+      <p class="card-subtitle">Update your name, role, and institution.</p>
+
+      <div class="msg" id="profileMsg"></div>
+
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="usernameField" disabled/>
+      </div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="fullNameField" placeholder="Your full name"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="emailField" placeholder="your@email.com"/>
+      </div>
+      <div class="form-group">
+        <label>Role</label>
+        <select id="roleField">
+          <option value="Pathologist">Pathologist</option>
+          <option value="Clinician">Clinician</option>
+          <option value="Radiologist">Radiologist</option>
+          <option value="Researcher">Researcher</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Institution <span style="font-size:0.75rem;font-weight:400;text-transform:none;">(optional)</span></label>
+        <input type="text" id="institutionField" placeholder="e.g. Korle Bu Teaching Hospital"/>
+      </div>
+
+      <div class="form-group">
+        <label>Member Since</label>
+        <input type="text" id="memberSince" disabled/>
+      </div>
+
+      <button class="save-btn" onclick="saveProfile()">Save Changes</button>
+    </div>
+
+    <!-- CHANGE PASSWORD -->
+    <div class="profile-card">
+      <h2>Change Password</h2>
+      <p class="card-subtitle">Choose a strong password to keep your account secure.</p>
+
+      <div class="msg" id="passwordMsg"></div>
+
+      <div class="form-group">
+        <label>Current Password</label>
+        <input type="password" id="currentPwd" placeholder="Enter your current password"/>
+      </div>
+      <div class="form-group">
+        <label>New Password</label>
+        <input type="password" id="newPwd" placeholder="Min 8 chars, uppercase, number, symbol"/>
+        <div id="pwdStrength" class="pwd-strength"></div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password</label>
+        <input type="password" id="confirmPwd" placeholder="Repeat your new password"/>
+      </div>
+
+      <button class="save-btn" onclick="changePassword()">Update Password</button>
+    </div>
+
+    <!-- Account Actions -->
+    <div class="danger-card">
+      <h2>Account Actions</h2>
+      <p class="card-subtitle">Irreversible actions — please proceed with caution.</p>
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <strong style="font-size:0.95rem; color:var(--text);">Delete your account</strong>
+          <p style="font-size:0.83rem; color:var(--text-muted); margin:0.2rem 0 0;">Deleting your account will permanently remove your profile and all your prediction history. This action cannot be undone.</p>
+        </div>
+        <button class="delete-btn" onclick="openDeleteModal()">Delete Account</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- DELETE ACCOUNT MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box">
+    <h3>Delete Account</h3>
+    <p>This will permanently delete your account and all your prediction history. Enter your current password to confirm.</p>
+    <input type="password" id="deleteConfirmPwd" placeholder="Enter your password to confirm"/>
+    <div class="modal-msg" id="deleteModalMsg"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+      <button class="modal-confirm" onclick="confirmDeleteAccount()">Yes, Delete your account</button>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <strong>OncoVision AI</strong> — Explainable Breast Cancer Classification System<br>
+</footer>
+
+<script>
+  const API = '';
+
+  async function loadProfile() {
+    try {
+      const authResp = await fetch(`${API}/api/check-auth`, { credentials: 'include' });
+      const authData = await authResp.json();
+      if (!authData.logged_in) {
+        window.location.href = `${API}/login`;
+        return;
+      }
+      const dynNav = document.getElementById('dynamicNav');
+      if (dynNav) {
+        if (authData.is_admin) {
+          dynNav.innerHTML = `
+            <li><a href="audit.html" style="font-size:0.82rem;color:var(--text-muted);">Audit Log</a></li>
+            <li><a href="/admin" style="font-size:0.82rem;color:var(--text-muted);">Admin Dashboard</a></li>
+            <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>`;
+        } else {
+          dynNav.innerHTML = `
+            <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>`;
+        }
+      }
+    } catch(e) {}
+
+    try {
+      const resp = await fetch(`${API}/api/profile`, { credentials: 'include' });
+      if (resp.status === 401) { window.location.href = `${API}/login`; return; }
+      const data = await resp.json();
+
+      document.getElementById('usernameField').value    = data.username;
+      document.getElementById('fullNameField').value    = data.full_name;
+      document.getElementById('emailField').value       = data.email || '';
+      document.getElementById('roleField').value        = data.role;
+      document.getElementById('institutionField').value = data.institution || '';
+      document.getElementById('memberSince').value      = data.created_at;
+      document.getElementById('pageTitle').textContent = `Welcome, ${data.full_name}`;
+      document.getElementById('pageSubtitle').textContent = `${data.role}${data.institution ? ' · ' + data.institution : ''}`;
+    } catch(e) {
+      showMsg('profileMsg', 'error', 'Could not load profile. Make sure Flask is running.');
+    }
+
+    try {
+      const logsResp = await fetch(`${API}/api/logs`, { credentials: 'include' });
+      const logsData = await logsResp.json();
+      const logs = logsData.logs || [];
+      const mal = logs.filter(l => l.prediction === 'Malignant').length;
+      const ben = logs.filter(l => l.prediction === 'Benign').length;
+      document.getElementById('statTotal').textContent = logs.length;
+      document.getElementById('statMal').textContent   = mal;
+      document.getElementById('statBen').textContent   = ben;
+      document.getElementById('statsRow').style.display = 'grid';
+    } catch(e) {}
+  }
+
+  async function saveProfile() {
+    const full_name   = document.getElementById('fullNameField').value.trim();
+    const email       = document.getElementById('emailField').value.trim();
+    const role        = document.getElementById('roleField').value;
+    const institution = document.getElementById('institutionField').value.trim();
+
+    if (!full_name) { showMsg('profileMsg', 'error', 'Full name is required.'); return; }
+
+    try {
+      const resp = await fetch(`${API}/api/profile/update`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name, email, role, institution })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        showMsg('profileMsg', 'success', 'Profile updated successfully.');
+        document.getElementById('pageTitle').textContent = `Welcome, ${data.full_name}`;
+        document.getElementById('pageSubtitle').textContent = `${data.role}${institution ? ' · ' + institution : ''}`;
+      } else {
+        showMsg('profileMsg', 'error', data.error || 'Update failed.');
+      }
+    } catch(e) {
+      showMsg('profileMsg', 'error', 'Could not save. Make sure Flask is running.');
+    }
+  }
+
+async function changePassword() {
+    const current_password  = document.getElementById('currentPwd').value;
+    const new_password      = document.getElementById('newPwd').value;
+    const confirm_password  = document.getElementById('confirmPwd').value;
+
+    if (!current_password || !new_password || !confirm_password) {
+      showMsg('passwordMsg', 'error', 'All password fields are required.');
+      return;
+    }
+
+    try {
+      const resp = await fetch(`${API}/api/profile/change-password`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ current_password, new_password, confirm_password })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        showMsg('passwordMsg', 'success', 'Password changed! Logging you out in 2 seconds...');
+        document.getElementById('currentPwd').value = '';
+        document.getElementById('newPwd').value     = '';
+        document.getElementById('confirmPwd').value = '';
+        setTimeout(() => {
+          window.location.href = `${API}/logout`;
+        }, 2000);
+      } else {
+        showMsg('passwordMsg', 'error', data.error || 'Password change failed.');
+      }
+    } catch(e) {
+      showMsg('passwordMsg', 'error', 'Could not update password. Make sure Flask is running.');
+    }
+  }
+
+  function showMsg(id, type, text) {
+    const el = document.getElementById(id);
+    el.className = `msg ${type}`;
+    el.textContent = text;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 5000);
+  }
+
+  document.getElementById('newPwd').addEventListener('input', function(e) {
+    const pwd = e.target.value;
+    const strength = document.getElementById('pwdStrength');
+    
+    if (pwd.length === 0) {
+      strength.textContent = '';
+      strength.style.color = '';
+    } else if (pwd.length < 8) {
+      strength.textContent = '⚠️ Too short (min 8 characters)';
+      strength.style.color = '#dc2626';
+    } else if (!/[A-Z]/.test(pwd) || !/[0-9]/.test(pwd) || !/[!@#$%^&*(),.?":{}|<>]/.test(pwd)) {
+      strength.textContent = '⚠️ Needs uppercase, number, and special character';
+      strength.style.color = '#f59e0b';
+    } else {
+      strength.textContent = '✓ Strong password';
+      strength.style.color = '#16a34a';
+    }
+  });
+
+  loadProfile();
+
+  function openDeleteModal() {
+    document.getElementById('deleteConfirmPwd').value = '';
+    document.getElementById('deleteModalMsg').className = 'modal-msg';
+    document.getElementById('deleteModalMsg').textContent = '';
+    document.getElementById('deleteModal').classList.add('open');
+  }
+
+  function closeDeleteModal() {
+    document.getElementById('deleteModal').classList.remove('open');
+  }
+
+  async function confirmDeleteAccount() {
+    const pwd = document.getElementById('deleteConfirmPwd').value;
+    const msgEl = document.getElementById('deleteModalMsg');
+    msgEl.className = 'modal-msg'; msgEl.textContent = '';
+
+    if (!pwd) {
+      msgEl.className = 'modal-msg error';
+      msgEl.textContent = 'Please enter your password.';
+      return;
+    }
+
+    const resp = await fetch(`${API}/api/account/delete`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd })
+    });
+    const data = await resp.json();
+
+    if (data.success) {
+      closeDeleteModal();
+      window.location.href = `${API}/login`;
+    } else {
+      msgEl.className = 'modal-msg error';
+      msgEl.textContent = data.error || 'Something went wrong.';
+    }
+  }
+
+  // Close modal on overlay click
+  document.getElementById('deleteModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+  });
+</script>
+
+</body>
+</html>

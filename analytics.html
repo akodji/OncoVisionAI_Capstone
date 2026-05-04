@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analytics — OncoVision AI</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="darkmode.js"></script>
+  <style>body{visibility:hidden;}</style>
+  <script>
+    function _authGuard() {
+      fetch('/api/check-auth', {credentials:'include', cache:'no-store'})
+        .then(r => r.json())
+        .then(d => {
+          if (!d.logged_in) { window.location.replace('/login'); }
+          else { document.body.style.visibility = 'visible'; }
+        })
+        .catch(() => { window.location.replace('/login'); });
+    }
+    _authGuard();
+    window.addEventListener('pageshow', function(e) { if (e.persisted) location.reload(); });
+  </script>
+
+  <style>
+    /* ── PAGE HEADER ── */
+    .page-header {
+      padding: 3.5rem 0 2rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-header__meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .page-header h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    /* ── PERIOD TABS ── */
+    .period-tabs {
+      display: flex;
+      gap: 0.4rem;
+      background: var(--pink-light);
+      padding: 0.3rem;
+      border-radius: 10px;
+    }
+
+    .period-tab {
+      padding: 0.45rem 1.1rem;
+      border-radius: 7px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+
+    .period-tab.active {
+      background: white;
+      color: var(--pink);
+      box-shadow: 0 2px 8px rgba(232,50,106,0.12);
+    }
+
+    /* ── KPI ROW ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+      padding: 2.5rem 0;
+    }
+
+    .kpi-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1.75rem;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.25s, box-shadow 0.25s;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--pink);
+      border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    .kpi-card--benign::after { background: #16a34a; }
+    .kpi-card--malignant::after { background: #dc2626; }
+    .kpi-card--confidence::after { background: #7c3aed; }
+
+    .kpi-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+    }
+
+    .kpi-value {
+      font-family: var(--font-serif);
+      font-size: 2.4rem;
+      color: var(--text);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .kpi-delta {
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .kpi-delta--up { color: #16a34a; }
+    .kpi-delta--down { color: #dc2626; }
+    .kpi-delta--neutral { color: var(--text-muted); }
+
+    /* ── CHARTS LAYOUT ── */
+    .charts-main {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .charts-secondary {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1.5rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .chart-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+
+    .chart-card--full {
+      grid-column: 1 / -1;
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .chart-title {
+      font-family: var(--font-serif);
+      font-size: 1.15rem;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+
+    .chart-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .chart-legend {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .legend-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .chart-wrap {
+      position: relative;
+    }
+
+    /* ── TOP USERS TABLE ── */
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .users-table th {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .users-table td {
+      padding: 0.8rem 0.75rem;
+      font-size: 0.88rem;
+      border-bottom: 1px solid rgba(236,221,228,0.5);
+      color: var(--text);
+    }
+
+    .users-table tr:last-child td { border-bottom: none; }
+
+    .users-table tr:hover td { background: var(--bg); }
+
+    .user-rank {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .user-name {
+      font-weight: 600;
+    }
+
+    .user-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .user-bar-bg {
+      flex: 1;
+      height: 6px;
+      background: var(--pink-light);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+
+    .user-bar-fill {
+      height: 100%;
+      background: var(--pink);
+      border-radius: 100px;
+      transition: width 0.8s ease;
+    }
+
+    .user-count {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      min-width: 28px;
+      text-align: right;
+    }
+
+    /* ── INSIGHT PILLS ── */
+    .insights {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .insight-pill {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .insight-icon {
+      font-size: 1.6rem;
+      flex-shrink: 0;
+    }
+
+    .insight-text {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .insight-text strong {
+      color: var(--text);
+      display: block;
+      font-size: 0.9rem;
+      margin-bottom: 0.15rem;
+    }
+
+    /* ── LOADING STATE ── */
+    .loading-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(253,248,245,0.85);
+      backdrop-filter: blur(4px);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .loading-overlay.active { display: flex; }
+    .loading-text {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    /* ── ADMIN NOTICE ── */
+    .admin-notice {
+      background: linear-gradient(135deg, var(--pink-light), #fff9f5);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 2rem;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .admin-notice strong { color: var(--text); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1024px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .charts-main { grid-template-columns: 1fr; }
+      .charts-secondary { grid-template-columns: 1fr; }
+      .insights { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .header-actions { width: 100%; justify-content: flex-end; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Fetching analytics data…</div>
+</div>
+
+<!-- API ERROR BANNER -->
+<div id="apiBanner" style="display:none; background:#fef2f2; border-bottom:1px solid #fecaca; padding:0.75rem 2rem; font-size:0.85rem; color:#dc2626; text-align:center;"></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">OncoVision AI</a>
+    <ul class="nav__links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li data-auth="true"><a href="history.html">History</a></li>
+      <li data-auth="true"><a href="analytics.html" class="active">Analytics</a></li>
+      <li data-auth="true"><a href="profile.html">Profile</a></li>
+      <ul id="dynamicNav" style="display:contents;"></ul>
+      <li><a href="analyze.html" class="nav__cta">Analyze Image</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-header__meta">
+      <div>
+        <h1>Analytics Dashboard</h1>
+        <p id="headerSub">System-wide prediction insights and usage statistics.</p>
+      </div>
+      <div class="header-actions">
+        <div class="period-tabs">
+          <button class="period-tab" data-period="7">7d</button>
+          <button class="period-tab active" data-period="30">30d</button>
+          <button class="period-tab" data-period="90">90d</button>
+          <button class="period-tab" data-period="365">1yr</button>
+        </div>
+        <button class="btn btn--outline" id="exportBtn" style="padding:0.6rem 1.2rem; font-size:0.85rem;">
+          ↓ Export CSV
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN NOTICE -->
+  <div class="admin-notice" id="adminNotice" style="display:none; margin-top:1.5rem;">
+    <span>🔒</span>
+    <span><strong>Admin view:</strong> Showing data across all users. Top users section visible.</span>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Predictions</div>
+      <div class="kpi-value" id="kpiTotal">—</div>
+      <div class="kpi-delta kpi-delta--up" id="kpiTotalDelta">Calculating…</div>
+    </div>
+    <div class="kpi-card kpi-card--malignant">
+      <div class="kpi-label">Malignant Cases</div>
+      <div class="kpi-value" id="kpiMalignant">—</div>
+      <div class="kpi-delta" id="kpiMalignantPct">— of total</div>
+    </div>
+    <div class="kpi-card kpi-card--benign">
+      <div class="kpi-label">Benign Cases</div>
+      <div class="kpi-value" id="kpiBenign">—</div>
+      <div class="kpi-delta" id="kpiBenignPct">— of total</div>
+    </div>
+    <div class="kpi-card kpi-card--confidence">
+      <div class="kpi-label">Avg Confidence</div>
+      <div class="kpi-value" id="kpiConfidence">—</div>
+      <div class="kpi-delta kpi-delta--neutral" id="kpiConfidenceLabel">across all predictions</div>
+    </div>
+  </div>
+
+  <!-- AI INSIGHTS ROW -->
+  <div class="insights" id="insightsRow">
+    <div class="insight-pill">
+      <span class="insight-icon"></span>
+      <div class="insight-text">
+        <strong id="ins1Title">Peak activity day</strong>
+        <span id="ins1Body">Loading…</span>
+      </div>
+    </div>
+    <div class="insight-pill">
+      <span class="insight-icon"></span>
+      <div class="insight-text">
+        <strong id="ins2Title">Highest confidence prediction</strong>
+        <span id="ins2Body">Loading…</span>
+      </div>
+    </div>
+    <div class="insight-pill">
+      <span class="insight-icon"></span>
+      <div class="insight-text">
+        <strong id="ins3Title">Low confidence flags</strong>
+        <span id="ins3Body">Loading…</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CHARTS: Line + Donut -->
+  <div class="charts-main">
+    <!-- Predictions over time -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Predictions Over Time</div>
+          <div class="chart-subtitle">Daily prediction volume by classification</div>
+        </div>
+        <div class="chart-legend">
+          <div class="legend-item"><span class="legend-dot" style="background:#e8326a;"></span>Malignant</div>
+          <div class="legend-item"><span class="legend-dot" style="background:#16a34a;"></span>Benign</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:280px;">
+        <canvas id="timelineChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Distribution donut -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Case Distribution</div>
+          <div class="chart-subtitle">Malignant vs Benign split</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:220px;">
+        <canvas id="donutChart"></canvas>
+      </div>
+      <div style="margin-top:1.2rem; display:flex; flex-direction:column; gap:0.6rem;" id="donutStats">
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+          <span style="display:flex;align-items:center;gap:0.5rem;color:var(--text-muted);"><span style="width:10px;height:10px;background:#e8326a;border-radius:50%;display:inline-block;"></span>Malignant</span>
+          <span style="font-family:var(--font-mono);font-weight:600;" id="donutMalignantPct">—</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+          <span style="display:flex;align-items:center;gap:0.5rem;color:var(--text-muted);"><span style="width:10px;height:10px;background:#16a34a;border-radius:50%;display:inline-block;"></span>Benign</span>
+          <span style="font-family:var(--font-mono);font-weight:600;" id="donutBenignPct">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECONDARY CHARTS: Histogram + Bar + Weekly -->
+  <div class="charts-secondary">
+    <!-- Confidence histogram -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Confidence Distribution</div>
+          <div class="chart-subtitle">How sure is the model?</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:200px;">
+        <canvas id="histogramChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Weekly trend -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Weekly Trend</div>
+          <div class="chart-subtitle">Predictions by day of week</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:200px;">
+        <canvas id="weeklyChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Monthly comparison -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Monthly Volume</div>
+          <div class="chart-subtitle">Last 6 months</div>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:200px;">
+        <canvas id="monthlyChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP USERS (admin-only) -->
+  <div class="chart-card" id="topUsersCard" style="margin-bottom:2.5rem; display:none;">
+    <div class="chart-header">
+      <div>
+        <div class="chart-title">Top Users by Prediction Count</div>
+        <div class="chart-subtitle">Most active pathologists on the platform</div>
+      </div>
+      <span class="section-label">Admin</span>
+    </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:2rem; align-items:start;">
+      <table class="users-table" id="topUsersTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>User</th>
+            <th>Role</th>
+            <th>Predictions</th>
+            <th>Activity</th>
+          </tr>
+        </thead>
+        <tbody id="topUsersBody"></tbody>
+      </table>
+      <div class="chart-wrap" style="height:220px;">
+        <canvas id="usersBarChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- DISCLAIMER -->
+<div class="container" style="padding-bottom: 3rem;">
+  <div class="disclaimer">
+    <strong>Note:</strong> Analytics data is derived from prediction records stored in the system. This dashboard is intended for research oversight and system monitoring only.
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <strong>OncoVision AI</strong> — Explainable Breast Cancer Classification System<br>
+  Analytics Dashboard · Research Prototype
+</footer>
+
+<script>
+/* ── CHART DEFAULTS ── */
+Chart.defaults.font.family = "'DM Sans', system-ui, sans-serif";
+Chart.defaults.color = '#6b4a58';
+Chart.defaults.plugins.legend.display = false;
+
+const PINK      = '#e8326a';
+const PINK_MUTED= '#f4a5bc';
+const PINK_LIGHT= 'rgba(232,50,106,0.08)';
+const GREEN     = '#16a34a';
+const GREEN_LIGHT='rgba(22,163,74,0.08)';
+const PURPLE    = '#7c3aed';
+const BORDER    = '#ecdde4';
+
+/* ── STATE ── */
+let activePeriod = 30;
+let isAdmin = false;
+let rawData = [];   // all predictions from backend
+let charts  = {};
+
+/* ── FETCH ANALYTICS ── */
+async function fetchAnalytics() {
+  document.getElementById('loadingOverlay').classList.add('active');
+  document.getElementById('apiBanner').style.display = 'none';
+  try {
+    const r = await fetch(`/api/analytics?days=${activePeriod}`, { credentials: 'include' });
+    if (r.status === 401) {
+      window.location.href = '/login';
+      return;
+    }
+    if (!r.ok) {
+      let msg = `API error ${r.status}`;
+      try { const e = await r.json(); msg = e.error || msg; } catch(_) {}
+      throw new Error(msg);
+    }
+    const d = await r.json();
+    rawData = d.predictions || [];
+    isAdmin = d.is_admin || false;
+    document.getElementById('apiBanner').style.display = 'none';
+    renderAll(d);
+  } catch(e) {
+    const banner = document.getElementById('apiBanner');
+    banner.textContent = `Could not load live data: ${e.message}. Showing demo data.`;
+    banner.style.display = 'block';
+    console.error('Analytics fetch failed:', e);
+    renderAll(getDemoData());
+  } finally {
+    document.getElementById('loadingOverlay').classList.remove('active');
+  }
+}
+
+/* ── DEMO DATA (fallback when backend is unavailable) ── */
+function getDemoData() {
+  const now = new Date();
+  const predictions = [];
+  const count = activePeriod === 7 ? 38 : activePeriod === 30 ? 147 : activePeriod === 90 ? 412 : 1023;
+
+  for (let i = 0; i < count; i++) {
+    const daysAgo = Math.floor(Math.random() * activePeriod);
+    const d = new Date(now);
+    d.setDate(d.getDate() - daysAgo);
+    predictions.push({
+      date: d.toISOString().slice(0, 10),
+      prediction: Math.random() > 0.38 ? 'Benign' : 'Malignant',
+      confidence: 0.55 + Math.random() * 0.44,
+      username: ['anna.k', 'dr.mensah', 'osei.a', 'akua.b', 'kwame.d'][Math.floor(Math.random()*5)],
+      role: 'Pathologist'
+    });
+  }
+
+  const malCount = predictions.filter(p => p.prediction === 'Malignant').length;
+  const benCount = predictions.length - malCount;
+  const avgConf  = predictions.reduce((s, p) => s + p.confidence, 0) / predictions.length;
+
+  return {
+    is_admin: true,
+    predictions,
+    summary: {
+      total: predictions.length,
+      malignant: malCount,
+      benign: benCount,
+      avg_confidence: avgConf
+    }
+  };
+}
+
+/* ── RENDER ── */
+function renderAll(data) {
+  const summary = data.summary || computeSummary(data.predictions || []);
+  const preds   = data.predictions || [];
+
+  renderKPIs(summary, preds);
+  renderInsights(preds, summary);
+  renderTimeline(preds);
+  renderDonut(summary);
+  renderHistogram(preds);
+  renderWeekly(preds);
+  renderMonthly(preds);
+
+  if (data.is_admin) {
+    document.getElementById('adminNotice').style.display = 'flex';
+    document.getElementById('topUsersCard').style.display = 'block';
+    renderTopUsers(preds);
+  }
+
+  document.getElementById('headerSub').textContent =
+    `${summary.total} predictions analysed · last ${activePeriod} days`;
+}
+
+function computeSummary(preds) {
+  const malCount = preds.filter(p => p.prediction === 'Malignant').length;
+  const avgConf  = preds.length ? preds.reduce((s, p) => s + (p.confidence || 0), 0) / preds.length : 0;
+  return { total: preds.length, malignant: malCount, benign: preds.length - malCount, avg_confidence: avgConf };
+}
+
+/* ── KPIs ── */
+function renderKPIs(summary, preds) {
+  document.getElementById('kpiTotal').textContent = summary.total.toLocaleString();
+  document.getElementById('kpiMalignant').textContent = summary.malignant.toLocaleString();
+  document.getElementById('kpiBenign').textContent = summary.benign.toLocaleString();
+  document.getElementById('kpiConfidence').textContent = summary.total
+    ? (summary.avg_confidence * 100).toFixed(1) + '%' : '—';
+
+  const malPct = summary.total ? ((summary.malignant / summary.total) * 100).toFixed(1) : 0;
+  const benPct = summary.total ? ((summary.benign   / summary.total) * 100).toFixed(1) : 0;
+
+  const malEl = document.getElementById('kpiMalignantPct');
+  malEl.textContent = `${malPct}% of total`;
+  malEl.className = 'kpi-delta kpi-delta--down';
+
+  const benEl = document.getElementById('kpiBenignPct');
+  benEl.textContent = `${benPct}% of total`;
+  benEl.className = 'kpi-delta kpi-delta--up';
+
+  // Period-over-period delta (simple split)
+  if (preds.length > 1) {
+    const sorted = [...preds].sort((a,b)=>a.date.localeCompare(b.date));
+    const mid = Math.floor(sorted.length / 2);
+    const firstHalf = sorted.slice(0, mid).length;
+    const secondHalf = sorted.slice(mid).length;
+    const change = firstHalf > 0 ? (((secondHalf - firstHalf) / firstHalf) * 100).toFixed(0) : 0;
+    const deltaEl = document.getElementById('kpiTotalDelta');
+    if (change > 0) {
+      deltaEl.textContent = `↑ ${change}% vs prior period`;
+      deltaEl.className = 'kpi-delta kpi-delta--up';
+    } else if (change < 0) {
+      deltaEl.textContent = `↓ ${Math.abs(change)}% vs prior period`;
+      deltaEl.className = 'kpi-delta kpi-delta--down';
+    } else {
+      deltaEl.textContent = 'No change vs prior period';
+      deltaEl.className = 'kpi-delta kpi-delta--neutral';
+    }
+  }
+}
+
+/* ── INSIGHTS ── */
+function renderInsights(preds, summary) {
+  if (!preds.length) return;
+
+  // Peak day
+  const dayCounts = {};
+  preds.forEach(p => { dayCounts[p.date] = (dayCounts[p.date] || 0) + 1; });
+  const peakDay = Object.entries(dayCounts).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('ins1Body').textContent =
+    peakDay ? `${peakDay[0]} with ${peakDay[1]} predictions` : 'N/A';
+
+  // Highest confidence
+  const best = preds.reduce((a,b) => (a.confidence||0) > (b.confidence||0) ? a : b, preds[0]);
+  document.getElementById('ins2Body').textContent =
+    best ? `${(best.confidence*100).toFixed(1)}% confidence (${best.prediction})` : 'N/A';
+
+  // Low confidence (<60%)
+  const lowConf = preds.filter(p => (p.confidence||0) < 0.6).length;
+  document.getElementById('ins3Body').textContent =
+    `${lowConf} prediction${lowConf !== 1 ? 's' : ''} below 60% confidence — review recommended`;
+}
+
+/* ── TIMELINE ── */
+function renderTimeline(preds) {
+  // Build daily buckets
+  const days = {};
+  preds.forEach(p => {
+    if (!days[p.date]) days[p.date] = { malignant: 0, benign: 0 };
+    if (p.prediction === 'Malignant') days[p.date].malignant++;
+    else days[p.date].benign++;
+  });
+
+  const labels = Object.keys(days).sort();
+  const malData = labels.map(d => days[d].malignant);
+  const benData = labels.map(d => days[d].benign);
+
+  // Format labels nicely
+  const fmtLabels = labels.map(d => {
+    const dt = new Date(d + 'T00:00:00');
+    return dt.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+  });
+
+  destroyChart('timelineChart');
+  charts.timeline = new Chart(document.getElementById('timelineChart'), {
+    type: 'line',
+    data: {
+      labels: fmtLabels,
+      datasets: [
+        {
+          label: 'Malignant',
+          data: malData,
+          borderColor: PINK,
+          backgroundColor: PINK_LIGHT,
+          fill: true,
+          tension: 0.4,
+          pointRadius: labels.length > 30 ? 0 : 4,
+          pointHoverRadius: 6,
+          borderWidth: 2.5,
+        },
+        {
+          label: 'Benign',
+          data: benData,
+          borderColor: GREEN,
+          backgroundColor: GREEN_LIGHT,
+          fill: true,
+          tension: 0.4,
+          pointRadius: labels.length > 30 ? 0 : 4,
+          pointHoverRadius: 6,
+          borderWidth: 2.5,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          grid: { color: BORDER, drawTicks: false },
+          ticks: {
+            maxTicksLimit: 10,
+            font: { family: "'JetBrains Mono', monospace", size: 11 }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: BORDER },
+          ticks: { stepSize: 1, font: { size: 11 } }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a0e13',
+          titleColor: '#f4a5bc',
+          bodyColor: '#c4a4b0',
+          padding: 12,
+          cornerRadius: 8,
+        }
+      }
+    }
+  });
+}
+
+/* ── DONUT ── */
+function renderDonut(summary) {
+  const mal = summary.malignant || 0;
+  const ben = summary.benign || 0;
+  const total = mal + ben;
+
+  document.getElementById('donutMalignantPct').textContent =
+    total ? ((mal/total)*100).toFixed(1)+'%' : '—';
+  document.getElementById('donutBenignPct').textContent =
+    total ? ((ben/total)*100).toFixed(1)+'%' : '—';
+
+  destroyChart('donutChart');
+  charts.donut = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Malignant', 'Benign'],
+      datasets: [{
+        data: [mal, ben],
+        backgroundColor: [PINK, GREEN],
+        borderColor: ['white', 'white'],
+        borderWidth: 3,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1a0e13',
+          titleColor: '#f4a5bc',
+          bodyColor: '#c4a4b0',
+          padding: 12,
+          cornerRadius: 8,
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.parsed} (${total ? ((ctx.parsed/total)*100).toFixed(1) : 0}%)`
+          }
+        }
+      }
+    }
+  });
+}
+
+/* ── CONFIDENCE HISTOGRAM ── */
+function renderHistogram(preds) {
+  const buckets = [
+    { label: '50–60%', min: 0.50, max: 0.60, count: 0 },
+    { label: '60–70%', min: 0.60, max: 0.70, count: 0 },
+    { label: '70–80%', min: 0.70, max: 0.80, count: 0 },
+    { label: '80–90%', min: 0.80, max: 0.90, count: 0 },
+    { label: '90–100%',min: 0.90, max: 1.01, count: 0 },
+  ];
+
+  preds.forEach(p => {
+    const c = p.confidence || 0;
+    const bucket = buckets.find(b => c >= b.min && c < b.max);
+    if (bucket) bucket.count++;
+  });
+
+  destroyChart('histogramChart');
+  charts.histogram = new Chart(document.getElementById('histogramChart'), {
+    type: 'bar',
+    data: {
+      labels: buckets.map(b => b.label),
+      datasets: [{
+        data: buckets.map(b => b.count),
+        backgroundColor: buckets.map((b, i) =>
+          i < 2 ? 'rgba(232,50,106,0.25)' : i < 3 ? 'rgba(232,50,106,0.5)' : PINK
+        ),
+        borderColor: PINK,
+        borderWidth: 1.5,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 } }
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: BORDER },
+          ticks: { stepSize: 1, font: { size: 10 } }
+        }
+      },
+      plugins: {
+        tooltip: {
+          backgroundColor: '#1a0e13',
+          titleColor: '#f4a5bc',
+          bodyColor: '#c4a4b0',
+          padding: 10,
+          cornerRadius: 8,
+        }
+      }
+    }
+  });
+}
+
+/* ── WEEKLY BAR ── */
+function renderWeekly(preds) {
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const counts = new Array(7).fill(0);
+  preds.forEach(p => {
+    const dow = new Date(p.date + 'T00:00:00').getDay();
+    counts[dow]++;
+  });
+
+  destroyChart('weeklyChart');
+  charts.weekly = new Chart(document.getElementById('weeklyChart'), {
+    type: 'bar',
+    data: {
+      labels: days,
+      datasets: [{
+        data: counts,
+        backgroundColor: counts.map(c => {
+          const max = Math.max(...counts);
+          return c === max ? PINK : 'rgba(232,50,106,0.2)';
+        }),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { beginAtZero: true, grid: { color: BORDER }, ticks: { stepSize: 1, font: { size: 10 } } }
+      },
+      plugins: {
+        tooltip: {
+          backgroundColor: '#1a0e13',
+          titleColor: '#f4a5bc',
+          bodyColor: '#c4a4b0',
+          padding: 10,
+          cornerRadius: 8,
+        }
+      }
+    }
+  });
+}
+
+/* ── MONTHLY BAR ── */
+function renderMonthly(preds) {
+  const months = {};
+  preds.forEach(p => {
+    const key = p.date.slice(0, 7); // YYYY-MM
+    months[key] = (months[key] || 0) + 1;
+  });
+
+  // Last 6 months
+  const now = new Date();
+  const labels = [];
+  const data   = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = d.toISOString().slice(0, 7);
+    labels.push(d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }));
+    data.push(months[key] || 0);
+  }
+
+  destroyChart('monthlyChart');
+  charts.monthly = new Chart(document.getElementById('monthlyChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: data.map((v, i) =>
+          i === data.length - 1 ? PINK : 'rgba(232,50,106,0.2)'
+        ),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+        y: { beginAtZero: true, grid: { color: BORDER }, ticks: { font: { size: 10 } } }
+      },
+      plugins: {
+        tooltip: {
+          backgroundColor: '#1a0e13',
+          titleColor: '#f4a5bc',
+          bodyColor: '#c4a4b0',
+          padding: 10,
+          cornerRadius: 8,
+        }
+      }
+    }
+  });
+}
+
+/* ── TOP USERS ── */
+function renderTopUsers(preds) {
+  const userMap = {};
+  preds.forEach(p => {
+    if (!userMap[p.username]) userMap[p.username] = { count: 0, role: p.role || 'User' };
+    userMap[p.username].count++;
+  });
+
+  const sorted = Object.entries(userMap).sort((a,b)=>b[1].count-a[1].count).slice(0,8);
+  const maxCount = sorted[0]?.[1].count || 1;
+
+  const tbody = document.getElementById('topUsersBody');
+  tbody.innerHTML = sorted.map(([name, data], i) => `
+    <tr>
+      <td class="user-rank">#${i+1}</td>
+      <td class="user-name">${name}</td>
+      <td><span class="badge badge--benign" style="font-size:0.72rem;">${data.role}</span></td>
+      <td>
+        <div class="user-bar-wrap">
+          <div class="user-bar-bg">
+            <div class="user-bar-fill" style="width:${(data.count/maxCount)*100}%"></div>
+          </div>
+          <span class="user-count">${data.count}</span>
+        </div>
+      </td>
+      <td style="font-family:var(--font-mono);font-size:0.78rem;color:var(--text-muted);">${((data.count/preds.length)*100).toFixed(1)}%</td>
+    </tr>
+  `).join('');
+
+  // Horizontal bar chart
+  destroyChart('usersBarChart');
+  charts.usersBar = new Chart(document.getElementById('usersBarChart'), {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([name]) => name),
+      datasets: [{
+        data: sorted.map(([,d]) => d.count),
+        backgroundColor: sorted.map((_,i) => i === 0 ? PINK : 'rgba(232,50,106,0.25)'),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { beginAtZero: true, grid: { color: BORDER }, ticks: { font: { size: 10 } } },
+        y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+      },
+      plugins: {
+        tooltip: {
+          backgroundColor: '#1a0e13',
+          titleColor: '#f4a5bc',
+          bodyColor: '#c4a4b0',
+          padding: 10,
+          cornerRadius: 8,
+        }
+      }
+    }
+  });
+}
+
+/* ── HELPERS ── */
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+/* ── PERIOD TABS ── */
+document.querySelectorAll('.period-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activePeriod = parseInt(btn.dataset.period);
+    fetchAnalytics();
+  });
+});
+
+/* ── EXPORT CSV ── */
+document.getElementById('exportBtn').addEventListener('click', () => {
+  if (!rawData.length) { alert('No data to export.'); return; }
+  const headers = ['date','prediction','confidence','username'];
+  const rows = rawData.map(p => headers.map(h => p[h] ?? '').join(','));
+  const csv  = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = `oncovision-analytics-${activePeriod}d.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+/* ── AUTH NAV ── */
+(async function() {
+  try {
+    const r = await fetch('/api/check-auth', { credentials: 'include' });
+    const d = await r.json();
+    const nav = document.getElementById('dynamicNav');
+    if (!nav) return;
+    if (d.logged_in && d.is_admin) {
+      nav.innerHTML = `
+        <li><a href="audit.html" style="font-size:0.82rem;color:var(--text-muted);">Audit Log</a></li>
+        <li><a href="/admin" style="font-size:0.82rem;color:var(--text-muted);">Admin Dashboard</a></li>
+        <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>
+      `;
+    } else if (d.logged_in) {
+      const name = d.full_name || d.username;
+      nav.innerHTML = `
+        <li><a href="profile.html" style="font-size:0.82rem;color:var(--text-muted);">${name}</a></li>
+        <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>
+      `;
+    } else {
+      nav.innerHTML = `
+        <li><a href="/login" style="font-size:0.82rem;color:var(--text-muted);">Sign in</a></li>
+      `;
+    }
+  } catch(e) {}
+})();
+
+/* ── INIT ── */
+fetchAnalytics();
+</script>
+</body>
+</html>

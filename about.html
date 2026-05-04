@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>About — OncoVision AI</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="darkmode.js"></script>
+  <style>
+    .about-hero {
+      padding: 5rem 0 4rem;
+      max-width: 760px;
+    }
+    .about-hero h1 {
+      font-family: var(--font-serif);
+      font-size: clamp(2.4rem, 4vw, 3.4rem);
+      line-height: 1.12;
+      margin-bottom: 1.5rem;
+    }
+    .about-hero p {
+      font-size: 1.08rem;
+      color: var(--text-muted);
+      line-height: 1.8;
+    }
+    .about-section {
+      padding: 4rem 0;
+      border-top: 1px solid var(--border);
+      max-width: 820px;
+    }
+    .about-section h2 {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .about-section p {
+      font-size: 0.97rem;
+      color: var(--text-muted);
+      line-height: 1.85;
+      margin-bottom: 1rem;
+    }
+    .about-section p:last-child { margin-bottom: 0; }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      margin-top: 2rem;
+    }
+    .step {
+      background: white;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+    }
+    .step__num {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      color: var(--pink);
+      line-height: 1;
+      margin-bottom: 0.75rem;
+    }
+    .step h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    .step p {
+      font-size: 0.87rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin: 0;
+    }
+    .perf-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+    .perf-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+    .perf-card__num {
+      font-family: var(--font-serif);
+      font-size: 2.2rem;
+      color: var(--pink);
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+    .perf-card__label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .perf-note {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+      background: var(--pink-light);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+      line-height: 1.7;
+      margin-top: 0.5rem;
+    }
+    .limit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+    .limit-item {
+      padding: 1.2rem 1.4rem;
+      background: white;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--pink);
+    }
+    .limit-item strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.93rem;
+      color: var(--text);
+    }
+    .limit-item p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      margin: 0;
+    }
+    .project-section {
+      padding: 4rem 0 6rem;
+      border-top: 1px solid var(--border);
+      max-width: 820px;
+    }
+    .project-section h2 {
+      font-family: var(--font-serif);
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    .project-section p {
+      font-size: 0.97rem;
+      color: var(--text-muted);
+      line-height: 1.85;
+      margin-bottom: 1rem;
+    }
+    .project-meta {
+      margin-top: 2rem;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 2;
+      border-top: 1px solid var(--border);
+      padding-top: 1.5rem;
+    }
+    .project-meta span { display: block; }
+    @media (max-width: 768px) {
+      .steps { grid-template-columns: 1fr; }
+      .perf-cards { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">OncoVision AI</a>
+    <ul class="nav__links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html" class="active">About</a></li>
+      <li data-auth="true"><a href="history.html">History</a></li>
+      <li data-auth="true"><a href="analytics.html">Analytics</a></li>
+      <li><a href="profile.html">Profile</a></li>
+      <ul id="dynamicNav" style="display:contents;"></ul>
+      <li><a href="analyze.html" class="nav__cta">Analyze Image</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+
+  <div class="about-hero">
+    <span class="section-label">About This System</span>
+    <h1>A screening support tool, not a diagnosis</h1>
+    <p>OncoVision AI is designed to assist pathologists and clinicians by providing a second opinion on histopathology images. It classifies tissue as benign or malignant and shows a visual explanation of the regions that influenced that decision. It is not a replacement for expert clinical judgment.</p>
+  </div>
+
+  <section class="about-section">
+    <h2>How it works</h2>
+    <p>The process is straightforward. You upload a histopathology image and the system returns a classification result alongside a heatmap showing which tissue regions the model focused on. The whole process takes a few seconds.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step__num">01</div>
+        <h3>Upload an image</h3>
+        <p>Drag and drop or select a histopathology image in JPG or PNG format from the Analyze page.</p>
+      </div>
+      <div class="step">
+        <div class="step__num">02</div>
+        <h3>Receive a classification</h3>
+        <p>The model returns a prediction of benign or malignant along with a confidence score indicating how certain the model is.</p>
+      </div>
+      <div class="step">
+        <div class="step__num">03</div>
+        <h3>Review the explanation</h3>
+        <p>A Grad-CAM heatmap and a SHAP attribution map highlight the tissue regions that most influenced the prediction, so you can assess whether the model attended to clinically relevant areas.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="about-section">
+    <h2>What the model can do</h2>
+    <p>The model was trained and evaluated on the BreakHis dataset, which contains histopathology images from 82 patients. The evaluation used a strict patient-level split, meaning the 1,148 test images came from 13 patients the model had never seen during training. This produces more honest performance estimates than the image-level splits used in much of the published literature.</p>
+    <div class="perf-cards">
+      <div class="perf-card">
+        <div class="perf-card__num">91.3%</div>
+        <div class="perf-card__label">Malignant cases correctly identified (recall)</div>
+      </div>
+      <div class="perf-card">
+        <div class="perf-card__num">78.4%</div>
+        <div class="perf-card__label">Overall accuracy on unseen test images</div>
+      </div>
+      <div class="perf-card">
+        <div class="perf-card__num">0.851</div>
+        <div class="perf-card__label">AUC across all classification thresholds</div>
+      </div>
+    </div>
+    <p class="perf-note">The system is configured to prioritise sensitivity, meaning it is more likely to flag a case as malignant when uncertain. Out of 647 malignant test cases, the model missed 56. Out of 501 benign test cases, 192 were incorrectly predicted as malignant. In a screening context, the cost of missing a malignancy is considered greater than the cost of an unnecessary follow-up.</p>
+  </section>
+
+  <section class="about-section">
+    <h2>What it cannot do</h2>
+    <p>Being transparent about limitations is as important as reporting performance. This system has several constraints that any user should understand before relying on it.</p>
+    <div class="limit-list">
+      <div class="limit-item">
+        <strong>It is not a clinical diagnostic tool</strong>
+        <p>This system was developed as a research prototype and has not been validated for clinical use. All predictions must be reviewed by a qualified pathologist before any clinical decision is made.</p>
+      </div>
+      <div class="limit-item">
+        <strong>It was trained on a single dataset</strong>
+        <p>The model was trained and tested exclusively on the BreakHis dataset from one laboratory. Performance on images from different hospitals, scanners, or staining protocols is unknown and may differ.</p>
+      </div>
+      <div class="limit-item">
+        <strong>High false positive rate</strong>
+        <p>Around 38% of benign cases in the test set were predicted as malignant. This is a deliberate tradeoff to maximise sensitivity, but it means the system generates a significant number of false alarms that require clinical filtering.</p>
+      </div>
+      <div class="limit-item">
+        <strong>No uncertainty estimation</strong>
+        <p>The model does not currently provide a reliable measure of uncertainty for individual predictions. Some incorrect predictions were made with high confidence scores, which the confidence value alone would not flag.</p>
+      </div>
+      <div class="limit-item">
+        <strong>Images are resized during processing</strong>
+        <p>All images are resized to 224 by 224 pixels before classification. Fine-grained cellular detail present in the original image may be lost in this process, particularly at higher magnification levels.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="project-section">
+  <h2>About the project</h2>
+  <p>
+    This system was developed as a final year capstone project for a BSc in Computer Science at Ashesi University.
+    Its goal is to assist clinicians by providing an interpretable breast cancer screening tool. The model classifies tissue as benign or malignant and highlights regions that influenced each prediction, helping users understand its reasoning.
+  </p>
+  <div class="project-meta">
+    <span>Capstone Project — BSc Computer Science, Ashesi University</span>
+  </div>
+</section>
+
+</div>
+
+<footer class="footer">
+  <strong>OncoVision AI</strong> — Explainable Breast Cancer Classification System<br>
+  </footer>
+
+
+<script>
+  (async function() {
+    try {
+      const r = await fetch('/api/check-auth', { credentials: 'include' });
+      const d = await r.json();
+      const nav = document.getElementById('dynamicNav');
+      if (!nav) return;
+      if (d.logged_in && d.is_admin) {
+        nav.innerHTML = `
+          <li><a href="audit.html" style="font-size:0.82rem;color:var(--text-muted);">Audit Log</a></li>
+          <li><a href="/admin" style="font-size:0.82rem;color:var(--text-muted);">Admin Dashboard</a></li>
+          <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>
+        `;
+      } else if (d.logged_in) {
+        const name = d.full_name || d.username;
+        nav.innerHTML = `
+          <li><a href="profile.html" style="font-size:0.82rem;color:var(--text-muted);">${name}</a></li>
+          <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>
+        `;
+      } else {
+        nav.innerHTML = `
+          <li><a href="/login" style="font-size:0.82rem;color:var(--text-muted);">Sign in</a></li>
+        `;
+      }
+    } catch(e) {}
+  })();
+</script>
+
+</body>
+</html>

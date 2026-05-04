@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Audit Log — OncoVision AI</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="darkmode.js"></script>
+  <style>body{visibility:hidden;}</style>
+  <script>
+    function _authGuard() {
+      fetch('/api/check-auth', {credentials:'include', cache:'no-store'})
+        .then(r => r.json())
+        .then(d => {
+          if (!d.logged_in) { window.location.replace('/login'); }
+          else { document.body.style.visibility = 'visible'; }
+        })
+        .catch(() => { window.location.replace('/login'); });
+    }
+    _authGuard();
+    window.addEventListener('pageshow', function(e) { if (e.persisted) location.reload(); });
+  </script>
+
+  <style>
+    .page-header { padding: 3.5rem 0 2.5rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+    .page-header h1 { font-family: var(--font-serif); font-size: 2.6rem; margin-bottom: 0.6rem; }
+    .page-header p { color: var(--text-muted); font-size: 1rem; }
+
+    .controls-bar {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+      align-items: center; margin-bottom: 1.5rem;
+    }
+    .search-input {
+      flex: 1; min-width: 180px; padding: 0.65rem 1rem;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.9rem; outline: none; background: var(--card-bg, white); color: var(--text);
+    }
+    .search-input:focus { border-color: var(--pink); }
+    .filter-btn {
+      padding: 0.65rem 1.1rem; border: 1px solid var(--border);
+      border-radius: var(--radius); background: var(--card-bg, white);
+      font-size: 0.85rem; cursor: pointer; color: var(--text-muted); transition: all 0.2s;
+    }
+    .filter-btn.active { background: var(--pink); color: white; border-color: var(--pink); }
+    .filter-btn:hover:not(.active) { border-color: var(--pink); color: var(--pink); }
+    .btn--outline {
+      padding: 0.65rem 1.1rem; border: 1px solid var(--pink);
+      border-radius: var(--radius); background: var(--card-bg, white); color: var(--pink);
+      font-size: 0.85rem; cursor: pointer; font-weight: 600; transition: all 0.2s;
+    }
+    .btn--outline:hover { background: var(--pink); color: white; }
+
+    .audit-table-wrap {
+      background: var(--card-bg, white); border-radius: var(--radius-lg);
+      border: 1px solid var(--border); overflow: hidden; margin-bottom: 2rem;
+    }
+    .audit-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .audit-table th {
+      text-align: left; padding: 0.9rem 1rem;
+      background: var(--pink-light); font-size: 0.76rem;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      font-weight: 600; color: var(--text); border-bottom: 2px solid var(--border);
+    }
+    .audit-table td {
+      padding: 0.85rem 1rem; border-bottom: 1px solid var(--border);
+      color: var(--text-muted); vertical-align: middle;
+    }
+    .audit-table tr:last-child td { border-bottom: none; }
+    .audit-table tbody tr:hover td { background: #fdf8fa; }
+
+    /* Action badges */
+    .action-badge {
+      display: inline-flex; align-items: center;
+      font-family: var(--font-mono); font-size: 0.72rem;
+      padding: 0.25rem 0.65rem; border-radius: 100px;
+      font-weight: 600; white-space: nowrap;
+    }
+    .action-badge--LOGIN      { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .action-badge--LOGOUT     { background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb; }
+    .action-badge--PREDICTION { background: #fce8ef; color: #e8326a; border: 1px solid #f4a5bc; }
+    .action-badge--PDF_EXPORT { background: #faf5ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+    .action-badge--DELETE     { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .action-badge--OTHER      { background: #f9fafb; color: #6b7280; border: 1px solid #e5e7eb; }
+
+    .empty-state {
+      text-align: center; padding: 4rem 2rem; color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; display: block; opacity: 0.4; }
+
+    .stats-strip {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 1rem; margin-bottom: 2rem;
+    }
+    .stat-pill {
+      background: var(--card-bg, white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 1.2rem; text-align: center;
+    }
+    .stat-pill__num {
+      font-family: var(--font-serif); font-size: 1.8rem;
+      color: var(--text); line-height: 1;
+    }
+    .stat-pill__label {
+      font-family: var(--font-mono); font-size: 0.7rem;
+      color: var(--text-muted); text-transform: uppercase;
+      letter-spacing: 0.08em; margin-top: 0.3rem;
+    }
+
+    .admin-only-notice {
+      display: flex; align-items: center; gap: 0.75rem;
+      background: var(--pink-light); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 0.9rem 1.3rem;
+      font-size: 0.88rem; color: var(--text-muted); margin-bottom: 2rem;
+    }
+
+    @media (max-width: 768px) {
+      .stats-strip { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── DARK MODE ── */
+    [data-theme="dark"] { --card-bg: #1a0e13; }
+
+    [data-theme="dark"] .audit-table tbody tr:hover td { background: #2a0f18; }
+
+    [data-theme="dark"] .audit-table td { color: var(--text-muted); }
+
+    [data-theme="dark"] .search-input::placeholder { color: var(--text-light); }
+
+    [data-theme="dark"] .action-badge--LOGIN      { background: #0c1829; color: #93c5fd; border-color: #1e3a5f; }
+    [data-theme="dark"] .action-badge--LOGOUT     { background: #1c1c1c; color: #9ca3af; border-color: #374151; }
+    [data-theme="dark"] .action-badge--PREDICTION { background: #2a0f18; color: #f4a5bc; border-color: #4a1528; }
+    [data-theme="dark"] .action-badge--PDF_EXPORT { background: #160d2a; color: #c4b5fd; border-color: #3730a3; }
+    [data-theme="dark"] .action-badge--DELETE     { background: #2a0c0c; color: #fca5a5; border-color: #7f1d1d; }
+    [data-theme="dark"] .action-badge--OTHER      { background: #1c1c1c; color: #9ca3af; border-color: #374151; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">OncoVision AI</a>
+    <ul class="nav__links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li data-auth="true"><a href="history.html">History</a></li>
+      <li data-auth="true"><a href="analytics.html">Analytics</a></li>
+      <li><a href="audit.html" class="active">Audit Log</a></li>
+      <li data-auth="true"><a href="profile.html">Profile</a></li>
+      <ul id="dynamicNav" style="display:contents;"></ul>
+      <li><a href="analyze.html" class="nav__cta">Analyze Image</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Audit Log</h1>
+    <p>Security and activity tracking — all user actions recorded in the system.</p>
+  </div>
+
+  <!-- Admin-only notice -->
+  <div class="admin-only-notice" id="adminNotice" style="display:none;">
+    <span>🔒</span>
+    <span>This page is visible to <strong>administrators only</strong>. Showing all user activity.</span>
+  </div>
+
+  <!-- Access denied -->
+  <div id="accessDenied" style="display:none; text-align:center; padding:5rem 2rem;">
+    <span style="font-size:3rem; display:block; margin-bottom:1rem;">🚫</span>
+    <h2 style="font-family:var(--font-serif); margin-bottom:0.75rem;">Admin Access Required</h2>
+    <p style="color:var(--text-muted);">The audit log is only accessible to administrators.</p>
+  </div>
+
+  <div id="auditContent" style="display:none;">
+    <!-- Stats strip -->
+    <div class="stats-strip" id="statsStrip">
+      <div class="stat-pill">
+        <div class="stat-pill__num" id="statTotal">—</div>
+        <div class="stat-pill__label">Total Events</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill__num" id="statLogins">—</div>
+        <div class="stat-pill__label">Logins</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill__num" id="statPreds">—</div>
+        <div class="stat-pill__label">Predictions</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill__num" id="statExports">—</div>
+        <div class="stat-pill__label">PDF Exports</div>
+      </div>
+      <div class="stat-pill">
+        <div class="stat-pill__num" id="statDeletes">—</div>
+        <div class="stat-pill__label">Deletions</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls-bar">
+      <input type="text" class="search-input" id="searchInput"
+             placeholder="Search by username or detail…" oninput="applyFilters()"/>
+      <button class="filter-btn active" onclick="setFilter('ALL', this)">All</button>
+      <button class="filter-btn" onclick="setFilter('LOGIN', this)">Logins</button>
+      <button class="filter-btn" onclick="setFilter('PREDICTION', this)">Predictions</button>
+      <button class="filter-btn" onclick="setFilter('PDF_EXPORT', this)">PDF Exports</button>
+      <button class="filter-btn" onclick="setFilter('DELETE', this)">Deletions</button>
+      <button class="btn--outline" onclick="exportCSV()">↓ Export CSV</button>
+    </div>
+
+    <!-- Table -->
+    <div class="audit-table-wrap">
+      <table class="audit-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Timestamp</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Detail</th>
+            <th>IP Address</th>
+          </tr>
+        </thead>
+        <tbody id="auditTableBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <span class="icon">📋</span>
+        <p>No audit events match your filters.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <strong>OncoVision AI</strong> — Explainable Breast Cancer Classification System<br>
+  Audit Log · Admin View
+</footer>
+
+<script>
+  const API = '';
+  let allLogs    = [];
+  let activeFilter = 'ALL';
+
+  /* ── AUTH + INIT ── */
+  (async function() {
+    try {
+      const r = await fetch(`${API}/api/check-auth`, { credentials: 'include' });
+      const d = await r.json();
+      const nav = document.getElementById('dynamicNav');
+      if (nav) {
+        if (d.logged_in && d.is_admin) {
+          nav.innerHTML = `
+            <li><a href="/admin" style="font-size:0.82rem;color:var(--text-muted);">Admin Dashboard</a></li>
+            <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>`;
+        } else if (d.logged_in) {
+          const name = d.full_name || d.username;
+          nav.innerHTML = `
+            <li><a href="profile.html" style="font-size:0.82rem;color:var(--text-muted);">${name}</a></li>
+            <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>`;
+        } else {
+          nav.innerHTML = `<li><a href="/login" style="font-size:0.82rem;color:var(--text-muted);">Sign in</a></li>`;
+        }
+      }
+
+      if (!d.logged_in || !d.is_admin) {
+        document.getElementById('accessDenied').style.display = 'block';
+        return;
+      }
+
+      document.getElementById('adminNotice').style.display = 'flex';
+      document.getElementById('auditContent').style.display = 'block';
+      await loadLogs();
+    } catch(e) {
+      document.getElementById('accessDenied').style.display = 'block';
+    }
+  })();
+
+  async function loadLogs() {
+    try {
+      const r = await fetch(`${API}/api/audit-logs?limit=500`, { credentials: 'include' });
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      allLogs = d.logs || [];
+      renderStats();
+      applyFilters();
+    } catch(e) {
+      document.getElementById('auditTableBody').innerHTML =
+        '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-muted);">Could not load audit logs.</td></tr>';
+    }
+  }
+
+  function renderStats() {
+    document.getElementById('statTotal').textContent   = allLogs.length;
+    document.getElementById('statLogins').textContent  = allLogs.filter(l => l.action === 'LOGIN').length;
+    document.getElementById('statPreds').textContent   = allLogs.filter(l => l.action === 'PREDICTION').length;
+    document.getElementById('statExports').textContent = allLogs.filter(l => l.action === 'PDF_EXPORT').length;
+    document.getElementById('statDeletes').textContent = allLogs.filter(l => l.action.includes('DELETE')).length;
+  }
+
+  function setFilter(action, btn) {
+    activeFilter = action;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    let filtered = allLogs;
+
+    if (activeFilter !== 'ALL') {
+      filtered = filtered.filter(l => l.action === activeFilter || l.action.includes(activeFilter));
+    }
+    if (search) {
+      filtered = filtered.filter(l =>
+        (l.username || '').toLowerCase().includes(search) ||
+        (l.detail   || '').toLowerCase().includes(search) ||
+        (l.action   || '').toLowerCase().includes(search)
+      );
+    }
+
+    renderTable(filtered);
+  }
+
+  function renderTable(logs) {
+    const tbody = document.getElementById('auditTableBody');
+    const empty = document.getElementById('emptyState');
+
+    if (!logs.length) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = logs.map(l => `
+      <tr>
+        <td style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-light);">#${l.id}</td>
+        <td style="font-family:var(--font-mono);font-size:0.78rem;white-space:nowrap;">${l.created_at}</td>
+        <td style="font-weight:600;color:var(--text);">${escHtml(l.username || '—')}</td>
+        <td><span class="action-badge action-badge--${badgeClass(l.action)}">${l.action}</span></td>
+        <td style="max-width:340px;word-break:break-word;">${escHtml(l.detail || '—')}</td>
+        <td style="font-family:var(--font-mono);font-size:0.78rem;">${l.ip_address || '—'}</td>
+      </tr>
+    `).join('');
+  }
+
+  function badgeClass(action) {
+    if (['LOGIN','LOGOUT','PREDICTION','PDF_EXPORT'].includes(action)) return action;
+    if (action.includes('DELETE')) return 'DELETE';
+    return 'OTHER';
+  }
+
+  function exportCSV() {
+    if (!allLogs.length) return;
+    const headers = ['id','username','action','detail','ip_address','created_at'];
+    const rows = allLogs.map(l => headers.map(h => `"${(l[h]||'').toString().replace(/"/g,'""')}"`).join(','));
+    const csv  = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `oncovision-audit-${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>

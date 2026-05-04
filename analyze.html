@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analyze Image — OncoVision AI</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="darkmode.js"></script>
+  <style>
+    .page-header {
+      padding: 3.5rem 0 2.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 3rem;
+    }
+    .page-header h1 {
+      font-family: var(--font-serif);
+      font-size: 2.6rem;
+      margin-bottom: 0.6rem;
+    }
+    .page-header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 560px;
+    }
+    .analyze-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2.5rem;
+      padding-bottom: 5rem;
+    }
+    .upload-panel { display: flex; flex-direction: column; gap: 1.5rem; }
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      background: white;
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--pink);
+      background: var(--pink-light);
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .upload-zone h3 {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    .upload-zone p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    .upload-zone .formats {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    .format-tag {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.25rem 0.6rem;
+      background: var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+    .preview-box {
+      display: none;
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+    }
+    .preview-box.visible { display: block; }
+    .preview-box img {
+      width: 100%;
+      border-radius: var(--radius);
+      max-height: 300px;
+      object-fit: contain;
+      background: #f9f9f9;
+    }
+    .preview-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .options-panel {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      border: 1px solid var(--border);
+    }
+    .options-panel h3 {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+    .option-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    .option-row:last-child { border-bottom: none; }
+    .toggle {
+      position: relative;
+      width: 40px; height: 22px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 22px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 16px; height: 16px;
+      left: 3px; top: 3px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: var(--pink); }
+    .toggle input:checked + .toggle-slider::before { transform: translateX(18px); }
+    .analyze-btn {
+      width: 100%;
+      justify-content: center;
+      font-size: 1rem;
+      padding: 1rem;
+      opacity: 0.5;
+      pointer-events: none;
+      transition: all 0.3s;
+    }
+    .analyze-btn.ready {
+      opacity: 1;
+      pointer-events: all;
+    }
+    .results-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .result-placeholder {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 2px dashed var(--border);
+      padding: 4rem 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      flex: 1;
+    }
+    .result-placeholder .icon { font-size: 3rem; margin-bottom: 1rem; display: block; opacity: 0.4; }
+    .result-placeholder p { font-size: 0.9rem; }
+    .result-cards { display: none; flex-direction: column; gap: 1.5rem; }
+    .result-cards.visible { display: flex; }
+    .prediction-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 1.8rem;
+      border: 1px solid var(--border);
+    }
+    .prediction-card__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.2rem;
+    }
+    .prediction-card__label {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+    }
+    .prediction-result {
+      font-family: var(--font-serif);
+      font-size: 2.2rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+    }
+    .prediction-result.malignant { color: #dc2626; }
+    .prediction-result.benign { color: #16a34a; }
+    .prediction-sub {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    .badge {
+      padding: 0.35rem 0.9rem;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge--malignant { background: #fee2e2; color: #dc2626; }
+    .badge--benign { background: #dcfce7; color: #16a34a; }
+    .confidence-bar {
+      background: linear-gradient(90deg, #dcfce7 0%, #fee2e2 100%);
+      border-radius: 100px;
+      height: 12px;
+      position: relative;
+      margin: 1.5rem 0 0.5rem;
+    }
+    .confidence-fill {
+      background: linear-gradient(90deg, var(--pink), var(--rose));
+      height: 100%;
+      border-radius: 100px;
+      transition: width 0.5s ease;
+    }
+    .confidence-fill.benign { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .confidence-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+    }
+    .warning-box {
+      background: #fef3c7;
+      border-left: 3px solid #f59e0b;
+      padding: 1rem 1.2rem;
+      border-radius: var(--radius);
+      font-size: 0.88rem;
+      color: #92400e;
+      margin-top: 1.5rem;
+      display: none;
+    }
+    .warning-box.visible { display: block; }
+    .xai-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .xai-content { padding: 1.5rem; display: flex; flex-direction: column; gap: 2rem; }
+    .xai-pane { display: block; }
+    .xai-pane__title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--pink);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .xai-img-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.2rem;
+    }
+    .xai-img-grid img {
+      width: 100%;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      cursor: zoom-in;
+      transition: opacity 0.2s;
+    }
+    .xai-img-grid img:hover { opacity: 0.85; }
+    .xai-img-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 0.4rem;
+    }
+    .xai-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      background: var(--pink-light);
+      padding: 1rem;
+      border-radius: var(--radius);
+    }
+    .loading-state {
+      display: none;
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 3rem 2rem;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    .loading-state.visible { display: block; }
+    .loading-steps { max-width: 320px; margin: 0 auto; }
+    .loading-step {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.85rem 0;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+    .loading-step__icon {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      transition: all 0.3s;
+    }
+    .loading-step.done .loading-step__icon {
+      background: var(--pink);
+      border-color: var(--pink);
+      color: white;
+    }
+    .loading-step.done { color: var(--text); }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+    .loading-content {
+      text-align: center;
+      color: white;
+    }
+    .spinner {
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid white;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 968px) {
+      .analyze-layout { grid-template-columns: 1fr; }
+      .xai-img-grid { grid-template-columns: 1fr; }
+    }
+
+    /* ── BATCH UPLOAD ── */
+    .batch-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .batch-toggle-row h3 {
+      font-family: var(--font-serif);
+      font-size: 1.1rem;
+      color: var(--text);
+    }
+    .mode-tabs {
+      display: flex;
+      gap: 0.35rem;
+      background: var(--pink-light);
+      padding: 0.25rem;
+      border-radius: 8px;
+    }
+    .mode-tab {
+      padding: 0.35rem 0.9rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .mode-tab.active {
+      background: white;
+      color: var(--pink);
+      box-shadow: 0 1px 4px rgba(232,50,106,0.15);
+    }
+
+    /* Queue */
+    .batch-queue {
+      display: none;
+      flex-direction: column;
+      gap: 0.6rem;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+    .batch-queue.visible { display: flex; }
+
+    .queue-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.7rem 1rem;
+      font-size: 0.85rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .queue-item__thumb {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+      object-fit: cover;
+      background: var(--bg);
+      flex-shrink: 0;
+    }
+    .queue-item__info { flex: 1; min-width: 0; }
+    .queue-item__name {
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .queue-item__meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .queue-item__status {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 100px;
+      flex-shrink: 0;
+    }
+    .queue-item__status--waiting  { background: var(--border); color: var(--text-muted); }
+    .queue-item__status--running  { background: #fef3c7; color: #92400e; }
+    .queue-item__status--done-mal { background: #fee2e2; color: #dc2626; }
+    .queue-item__status--done-ben { background: #dcfce7; color: #16a34a; }
+    .queue-item__status--error    { background: #fee2e2; color: #dc2626; }
+    .queue-item__remove {
+      background: none;
+      border: none;
+      color: var(--text-light);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+      transition: color 0.2s;
+    }
+    .queue-item__remove:hover { color: #dc2626; }
+
+    /* Progress bar inside queue item */
+    .queue-progress {
+      position: absolute;
+      bottom: 0; left: 0;
+      height: 3px;
+      background: var(--pink);
+      border-radius: 0 0 var(--radius) var(--radius);
+      transition: width 0.4s ease;
+      width: 0;
+    }
+
+    /* Batch summary bar */
+    .batch-summary {
+      display: none;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.2rem;
+    }
+    .batch-summary.visible { display: block; }
+    .batch-summary__row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      margin-bottom: 0.6rem;
+    }
+    .batch-progress-bar {
+      background: var(--border);
+      border-radius: 100px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .batch-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--pink), var(--rose));
+      border-radius: 100px;
+      transition: width 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">OncoVision AI</a>
+    <ul class="nav__links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li data-auth="true"><a href="history.html">History</a></li>
+      <li data-auth="true"><a href="analytics.html">Analytics</a></li>
+      <li data-auth="true"><a href="profile.html">Profile</a></li>
+      <ul id="dynamicNav" style="display:contents;"></ul>
+      <li><a href="analyze.html" class="nav__cta active">Analyze Image</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Analyze Histopathology Image</h1>
+    <p>Upload a breast tissue image for AI-powered malignancy detection with explainable results.</p>
+  </div>
+
+  <div id="authBanner" style="display:none; background:#fef3c7; border-left:3px solid #f59e0b; padding:1rem 1.2rem; border-radius:8px; margin-bottom:2rem; font-size:0.9rem; color:#92400e;">
+    ⚠️ <strong>Not signed in.</strong> Sign in to save your predictions to history. <a href="/login" style="color:#f59e0b; text-decoration:underline;">Sign in now</a>
+  </div>
+
+  <div style="background:var(--pink-light,#fff0f5); border:1px solid var(--pink,#c67489); border-radius:10px; padding:1rem 1.25rem; margin-bottom:2rem; font-size:0.88rem; color:var(--text,#333); line-height:1.55;">
+    <strong>⚕️ Medical Disclaimer:</strong> OncoVision AI is a <strong>research and educational prototype</strong>.
+    Predictions generated here are <strong>not</strong> clinically validated and must <strong>not</strong> be used as a substitute
+    for professional pathology review or medical diagnosis. Always consult a qualified healthcare professional
+    before making any clinical decisions.
+  </div>
+
+  <div class="analyze-layout">
+    <div class="upload-panel">
+      <!-- Mode Toggle -->
+      <div class="batch-toggle-row">
+        <h3>Upload Image</h3>
+        <div class="mode-tabs">
+          <button class="mode-tab active" id="tabSingle" onclick="setMode('single')">Single</button>
+          <button class="mode-tab" id="tabBatch" onclick="setMode('batch')">Batch</button>
+        </div>
+      </div>
+
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="imageInput" accept="image/*"/>
+        <span class="upload-icon">📁</span>
+        <h3 id="uploadTitle">Drop image here or click to browse</h3>
+        <p id="uploadHint">Upload a histopathology image for analysis</p>
+        <div class="formats">
+          <span class="format-tag">PNG</span>
+          <span class="format-tag">JPG</span>
+          <span class="format-tag">TIFF</span>
+        </div>
+      </div>
+
+      <!-- Single mode: preview -->
+      <div class="preview-box" id="previewBox">
+        <img id="previewImg" src="" alt="Preview"/>
+        <div class="preview-meta">
+          <span id="fileName">—</span>
+          <span id="fileSize">—</span>
+        </div>
+      </div>
+
+      <!-- Batch mode: queue -->
+      <div class="batch-queue" id="batchQueue"></div>
+
+      <!-- Batch summary progress -->
+      <div class="batch-summary" id="batchSummary">
+        <div class="batch-summary__row">
+          <span style="font-weight:600;color:var(--text);">Processing queue</span>
+          <span id="batchCounter" style="font-family:var(--font-mono);font-size:0.82rem;color:var(--text-muted);">0 / 0</span>
+        </div>
+        <div class="batch-summary__row" style="margin-bottom:0;">
+          <span style="font-size:0.8rem;color:var(--text-muted);" id="batchResultSummary"></span>
+          <button id="batchDownloadBtn" onclick="downloadBatchCSV()" style="display:none;font-size:0.8rem;padding:0.3rem 0.8rem;" class="btn btn--outline">↓ Download CSV</button>
+        </div>
+        <div class="batch-progress-bar">
+          <div class="batch-progress-fill" id="batchProgressFill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="options-panel">
+        <h3>Analysis Options</h3>
+        <!-- Patient name only shown in single mode -->
+        <div id="patientNameRow">
+          <div class="option-row">
+            <label for="patientName" style="font-size:0.85rem;">Patient Name (optional)</label>
+          </div>
+          <input type="text" id="patientName" placeholder="Enter patient name" style="width:100%; padding:0.6rem; border:1px solid var(--border); border-radius:6px; font-size:0.9rem; margin-bottom:1rem;"/>
+        </div>
+        <div class="option-row">
+          <span>Grad-CAM Heatmap</span>
+          <label class="toggle">
+            <input type="checkbox" id="gradcamToggle" checked/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="option-row">
+          <span>SHAP Explanation</span>
+          <label class="toggle">
+            <input type="checkbox" id="shapToggle" checked/>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn analyze-btn" id="analyzeBtn" onclick="handleAnalyze()">
+        Analyze Image
+      </button>
+    </div>
+
+    <div class="results-panel">
+      <div class="result-placeholder" id="placeholder">
+        <span class="icon">🔬</span>
+        <p><strong>Results will appear here</strong><br>Upload an image and click "Analyze Image" to begin.</p>
+      </div>
+
+      <div class="loading-state" id="loadingState">
+        <div class="loading-steps">
+          <div class="loading-step" id="step1">
+            <div class="loading-step__icon">1</div>
+            <span>Loading image...</span>
+          </div>
+          <div class="loading-step" id="step2">
+            <div class="loading-step__icon">2</div>
+            <span>Running classification model...</span>
+          </div>
+          <div class="loading-step" id="step3">
+            <div class="loading-step__icon">3</div>
+            <span>Generating Grad-CAM heatmap...</span>
+          </div>
+          <div class="loading-step" id="step4">
+            <div class="loading-step__icon">4</div>
+            <span>Computing SHAP values <em style="color:var(--text-muted);font-size:0.85em;">(this can take 20–40 s)</em>...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-cards" id="resultCards">
+        <div class="prediction-card">
+          <div class="prediction-card__header">
+            <span class="prediction-card__label">Prediction Result</span>
+            <span class="badge" id="resultBadge">—</span>
+          </div>
+          <div class="prediction-result" id="predictionResult">—</div>
+          <div class="prediction-sub" id="predictionSub">—</div>
+          <div id="savedIndicator" style="margin-top:1rem; font-size:0.85rem; display:none;"></div>
+          <div class="confidence-bar">
+            <div class="confidence-fill" id="confidenceFill"></div>
+          </div>
+          <div class="confidence-labels">
+            <span>Benign</span>
+            <span id="confidenceLabel">—</span>
+            <span>Malignant</span>
+          </div>
+          <div class="warning-box" id="warningBox">
+            ⚠️ <strong>Borderline result.</strong> The confidence score is close to the decision threshold (0.55). This prediction should not be used alone — <strong>manual pathological review is strongly recommended</strong> before any clinical decision is made.
+          </div>
+        </div>
+
+        <div class="xai-card">
+          <div class="xai-content">
+            <div class="xai-pane" id="pane-gradcam">
+              <div class="xai-pane__title">Grad-CAM Heatmap</div>
+              <div class="xai-img-grid">
+                <div>
+                  <img id="gcOriginal" src="" alt="Original"/>
+                  <div class="xai-img-label">Original</div>
+                </div>
+                <div>
+                  <img id="gcHeatmap" src="" alt="Grad-CAM"/>
+                  <div class="xai-img-label">Heatmap</div>
+                </div>
+                <div>
+                  <img id="gcOverlay" src="" alt="Overlay"/>
+                  <div class="xai-img-label">Overlay</div>
+                </div>
+              </div>
+              <div class="xai-desc" id="gradcamDesc">
+                Grad-CAM highlights the tissue regions with the strongest influence on the classification decision. <strong>Red/warm regions</strong> indicate areas the model focused on most strongly.
+              </div>
+            </div>
+
+            <div class="xai-pane" id="pane-shap">
+              <div class="xai-pane__title">SHAP Attribution Map</div>
+              <div class="xai-img-grid">
+                <div>
+                  <img id="shapOriginal" src="" alt="Original"/>
+                  <div class="xai-img-label">Original</div>
+                </div>
+                <div>
+                  <img id="shapHeatmap" src="" alt="SHAP"/>
+                  <div class="xai-img-label">SHAP Values</div>
+                </div>
+                <div>
+                  <img id="shapOverlay" src="" alt="Overlay"/>
+                  <div class="xai-img-label">Overlay</div>
+                </div>
+              </div>
+              <div class="xai-desc" id="shapDesc">
+                SHAP GradientExplainer values show pixel-level feature contributions. <strong>Bright regions</strong> indicate pixels with the highest absolute contribution to the prediction.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-content">
+    <div class="spinner"></div>
+    <p>Analyzing image...</p>
+  </div>
+</div>
+
+<footer class="footer">
+  <strong>OncoVision AI</strong> — Explainable Breast Cancer Classification System
+</footer>
+
+<script>
+  /* ── AUTH ── */
+  async function checkAuth() {
+    try {
+      const resp = await fetch('/api/check-auth', { credentials: 'include' });
+      const data = await resp.json();
+      const dynNav = document.getElementById('dynamicNav');
+      if (!dynNav) return;
+      if (!data.logged_in) {
+        document.getElementById('authBanner').style.display = 'block';
+        dynNav.innerHTML = `<li><a href="/login" style="font-size:0.82rem;color:var(--text-muted);">Sign in</a></li>`;
+      } else if (data.is_admin) {
+        dynNav.innerHTML = `
+          <li><a href="audit.html" style="font-size:0.82rem;color:var(--text-muted);">Audit Log</a></li>
+          <li><a href="/admin" style="font-size:0.82rem;color:var(--text-muted);">Admin Dashboard</a></li>
+          <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>
+        `;
+      } else {
+        const name = data.full_name || data.username;
+        dynNav.innerHTML = `
+          <li><a href="profile.html" style="font-size:0.82rem;color:var(--text-muted);">${name}</a></li>
+          <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>
+        `;
+      }
+    } catch(e) {}
+  }
+  checkAuth();
+
+  /* ── ELEMENTS ── */
+  const uploadZone   = document.getElementById('uploadZone');
+  const imageInput   = document.getElementById('imageInput');
+  const previewBox   = document.getElementById('previewBox');
+  const previewImg   = document.getElementById('previewImg');
+  const analyzeBtn   = document.getElementById('analyzeBtn');
+  const placeholder  = document.getElementById('placeholder');
+  const loadingState = document.getElementById('loadingState');
+  const resultCards  = document.getElementById('resultCards');
+
+  /* ── MODE ── */
+  let currentMode = 'single';
+  let selectedFile = null;
+  let batchFiles   = [];   // [{file, id, status, result}]
+  let batchResults = [];   // collected for CSV
+
+  function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('tabSingle').classList.toggle('active', mode === 'single');
+    document.getElementById('tabBatch').classList.toggle('active', mode === 'batch');
+
+    // Toggle file input multiple
+    imageInput.multiple = (mode === 'batch');
+    imageInput.accept   = 'image/*';
+
+    document.getElementById('uploadTitle').textContent =
+      mode === 'batch' ? 'Drop images here or click to browse' : 'Drop image here or click to browse';
+    document.getElementById('uploadHint').textContent =
+      mode === 'batch' ? 'Select multiple histopathology images' : 'Upload a histopathology image for analysis';
+
+    document.getElementById('patientNameRow').style.display = mode === 'batch' ? 'none' : 'block';
+
+    // Reset
+    selectedFile = null;
+    batchFiles   = [];
+    batchResults = [];
+    previewBox.classList.remove('visible');
+    document.getElementById('batchQueue').classList.remove('visible');
+    document.getElementById('batchQueue').innerHTML = '';
+    document.getElementById('batchSummary').classList.remove('visible');
+    analyzeBtn.classList.remove('ready');
+    analyzeBtn.textContent = mode === 'batch' ? 'Analyze All Images' : 'Analyze Image';
+  }
+
+  /* ── DRAG / DROP ── */
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('dragover');
+    if (currentMode === 'batch') {
+      handleBatchFiles([...e.dataTransfer.files]);
+    } else {
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    }
+  });
+
+  imageInput.addEventListener('change', e => {
+    if (currentMode === 'batch') {
+      handleBatchFiles([...e.target.files]);
+    } else {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
+    }
+  });
+
+  /* ── SINGLE FILE ── */
+  function handleFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      previewBox.classList.add('visible');
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = (file.size / 1024).toFixed(1) + ' KB';
+      analyzeBtn.classList.add('ready');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ── BATCH FILES ── */
+  function handleBatchFiles(files) {
+    const allowed = ['image/png','image/jpeg','image/jpg','image/tiff'];
+    const valid   = files.filter(f => allowed.includes(f.type) || f.name.match(/\.(png|jpg|jpeg|tiff)$/i));
+    if (!valid.length) { alert('No valid image files selected.'); return; }
+
+    batchFiles = valid.map((f, i) => ({ file: f, id: 'batch_' + Date.now() + '_' + i, status: 'waiting', result: null }));
+    batchResults = [];
+    renderQueue();
+    analyzeBtn.classList.add('ready');
+  }
+
+  function renderQueue() {
+    const queue = document.getElementById('batchQueue');
+    queue.innerHTML = '';
+    batchFiles.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'queue-item';
+      div.id = 'qi_' + item.id;
+
+      const thumb = document.createElement('img');
+      thumb.className = 'queue-item__thumb';
+      const reader = new FileReader();
+      reader.onload = e => thumb.src = e.target.result;
+      reader.readAsDataURL(item.file);
+
+      const info = document.createElement('div');
+      info.className = 'queue-item__info';
+      info.innerHTML = `<div class="queue-item__name">${item.file.name}</div>
+                        <div class="queue-item__meta">${(item.file.size/1024).toFixed(1)} KB</div>`;
+
+      const status = document.createElement('span');
+      status.className = 'queue-item__status queue-item__status--waiting';
+      status.textContent = 'Waiting';
+      status.id = 'qs_' + item.id;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'queue-item__remove';
+      removeBtn.textContent = '✕';
+      removeBtn.onclick = (e) => { e.stopPropagation(); removeFromQueue(item.id); };
+
+      const prog = document.createElement('div');
+      prog.className = 'queue-progress';
+      prog.id = 'qp_' + item.id;
+
+      div.append(thumb, info, status, removeBtn, prog);
+      queue.appendChild(div);
+    });
+    queue.classList.add('visible');
+  }
+
+  function removeFromQueue(id) {
+    batchFiles = batchFiles.filter(f => f.id !== id);
+    if (!batchFiles.length) {
+      analyzeBtn.classList.remove('ready');
+      document.getElementById('batchQueue').classList.remove('visible');
+    } else {
+      renderQueue();
+    }
+  }
+
+  function updateQueueItem(id, status, label) {
+    const statusEl = document.getElementById('qs_' + id);
+    const progEl   = document.getElementById('qp_' + id);
+    if (!statusEl) return;
+    statusEl.className = 'queue-item__status queue-item__status--' + status;
+    statusEl.textContent = label;
+    if (progEl) progEl.style.width = status === 'running' ? '60%' : status.startsWith('done') ? '100%' : '0%';
+  }
+
+  /* ── ROUTE ── */
+  function handleAnalyze() {
+    if (currentMode === 'batch') runBatchAnalysis();
+    else runAnalysis();
+  }
+
+  /* ── SINGLE ANALYSIS ── */
+  async function runAnalysis() {
+    if (!selectedFile) return;
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    placeholder.style.display = 'none';
+    resultCards.classList.remove('visible');
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+    formData.append('patient_name', document.getElementById('patientName').value.trim());
+    formData.append('gradcam', document.getElementById('gradcamToggle').checked);
+    formData.append('shap', document.getElementById('shapToggle').checked);
+
+    try {
+      const resp = await fetch('/api/analyze', { method: 'POST', credentials: 'include', body: formData });
+      if (!resp.ok) { let msg = `Server error (${resp.status})`; try { const e = await resp.json(); msg = e.error || msg; } catch(_) {} throw new Error(msg); }
+      const data = await resp.json();
+      document.getElementById('loadingOverlay').style.display = 'none';
+      displayResults(data);
+    } catch(err) {
+      document.getElementById('loadingOverlay').style.display = 'none';
+      showError(err.message);
+    }
+  }
+
+  /* ── BATCH ANALYSIS ── */
+  async function runBatchAnalysis() {
+    if (!batchFiles.length) return;
+    analyzeBtn.disabled = true;
+    analyzeBtn.textContent = 'Processing…';
+    batchResults = [];
+
+    const summary = document.getElementById('batchSummary');
+    summary.classList.add('visible');
+    document.getElementById('batchProgressFill').style.width = '0%';
+    document.getElementById('batchResultSummary').textContent = '';
+    document.getElementById('batchDownloadBtn').style.display = 'none';
+
+    let done = 0, malCount = 0, benCount = 0;
+
+    for (const item of batchFiles) {
+      updateQueueItem(item.id, 'running', 'Analysing…');
+      document.getElementById('batchCounter').textContent = `${done} / ${batchFiles.length}`;
+
+      const formData = new FormData();
+      formData.append('image', item.file);
+      formData.append('gradcam', document.getElementById('gradcamToggle').checked);
+      formData.append('shap', 'false'); // batch: skip SHAP for speed
+
+      try {
+        const resp = await fetch('/api/analyze', { method: 'POST', credentials: 'include', body: formData });
+        const data = await resp.json();
+
+        if (resp.ok && data.prediction) {
+          item.status = 'done';
+          item.result = data;
+          const isMal = data.prediction === 'Malignant';
+          if (isMal) malCount++; else benCount++;
+          updateQueueItem(item.id, isMal ? 'done-mal' : 'done-ben',
+            `${data.prediction} · ${(data.confidence*100).toFixed(1)}%`);
+          batchResults.push({
+            filename: item.file.name,
+            prediction: data.prediction,
+            confidence: (data.confidence * 100).toFixed(1) + '%',
+            probability: data.probability
+          });
+        } else {
+          updateQueueItem(item.id, 'error', 'Error');
+        }
+      } catch(e) {
+        updateQueueItem(item.id, 'error', 'Error');
+      }
+
+      done++;
+      document.getElementById('batchCounter').textContent = `${done} / ${batchFiles.length}`;
+      document.getElementById('batchProgressFill').style.width = `${(done / batchFiles.length) * 100}%`;
+    }
+
+    analyzeBtn.disabled = false;
+    analyzeBtn.textContent = 'Analyze All Images';
+    document.getElementById('batchResultSummary').innerHTML =
+      `<span style="color:#dc2626;font-weight:600;">${malCount} Malignant</span> &nbsp;·&nbsp; <span style="color:#16a34a;font-weight:600;">${benCount} Benign</span>`;
+    document.getElementById('batchDownloadBtn').style.display = 'inline-flex';
+  }
+
+  /* ── BATCH CSV ── */
+  function downloadBatchCSV() {
+    if (!batchResults.length) return;
+    const headers = ['filename','prediction','confidence','probability'];
+    const rows = batchResults.map(r => headers.map(h => r[h]).join(','));
+    const csv  = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `oncovision-batch-${Date.now()}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  /* ── XAI TAB SWITCH ── */
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.xai-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.xai-pane').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('pane-' + tab).classList.add('active');
+  }
+
+  /* ── DISPLAY RESULTS ── */
+  function displayResults(data) {
+    resultCards.classList.add('visible');
+    const indicator = document.getElementById('savedIndicator');
+    indicator.style.display = 'block';
+    indicator.innerHTML = data.saved
+      ? '<span style="color:#16a34a;">✓ Result saved to your history.</span>'
+      : '<span style="color:#999;">Result not saved. <a href="/login" style="color:var(--pink);">Sign in</a> to save results.</span>';
+
+    const isMalignant = data.prediction === 'Malignant';
+    const conf = (data.confidence * 100).toFixed(1);
+
+    document.getElementById('predictionResult').textContent = data.prediction;
+    document.getElementById('predictionResult').className   = 'prediction-result ' + data.prediction.toLowerCase();
+    const patientStr = data.patient_name && data.patient_name !== 'Unknown' ? ` · Patient: ${data.patient_name}` : '';
+    document.getElementById('predictionSub').textContent    = `Confidence: ${conf}% · Threshold: 0.55${patientStr}`;
+    document.getElementById('confidenceLabel').textContent  = conf + '%';
+    document.getElementById('resultBadge').className        = 'badge badge--' + data.prediction.toLowerCase();
+    document.getElementById('resultBadge').textContent      = data.prediction;
+
+    const fill = document.getElementById('confidenceFill');
+    fill.style.width = isMalignant ? conf + '%' : (100 - parseFloat(conf)) + '%';
+    fill.className   = 'confidence-fill' + (isMalignant ? '' : ' benign');
+
+    if (data.confidence < 0.70) document.getElementById('warningBox').classList.add('visible');
+
+    if (data.gradcam) {
+      document.getElementById('gcOriginal').src = 'data:image/png;base64,' + data.gradcam.original;
+      document.getElementById('gcHeatmap').src  = 'data:image/png;base64,' + data.gradcam.heatmap;
+      document.getElementById('gcOverlay').src  = 'data:image/png;base64,' + data.gradcam.overlay;
+      document.getElementById('gradcamDesc').innerHTML = isMalignant
+        ? `The model classified this image as <strong>Malignant</strong> with <strong>${conf}% confidence</strong>. The red/warm regions in the heatmap highlight the tissue areas that most strongly drove this decision. These are the regions a clinician should examine most carefully.`
+        : `The model classified this image as <strong>Benign</strong> with <strong>${conf}% confidence</strong>. The red/warm regions highlight the tissue areas the model focused on when making this assessment. If these regions appear structurally normal, this supports the benign classification.`;
+    }
+    if (data.shap) {
+      document.getElementById('shapOriginal').src = 'data:image/png;base64,' + data.shap.original;
+      document.getElementById('shapHeatmap').src  = 'data:image/png;base64,' + data.shap.heatmap;
+      document.getElementById('shapOverlay').src  = 'data:image/png;base64,' + data.shap.overlay;
+      document.getElementById('shapDesc').innerHTML = isMalignant
+        ? `SHAP pixel-level attribution confirms the <strong>Malignant</strong> classification. Bright/yellow regions represent pixels that contributed most to this prediction. Convergence between these regions and the Grad-CAM heatmap strengthens confidence in the model's decision.`
+        : `SHAP pixel-level attribution supports the <strong>Benign</strong> classification. Bright/yellow regions show which pixels contributed most to this assessment. Where these align with the Grad-CAM heatmap, the model's reasoning is most consistent.`;
+    }
+  }
+
+  /* ── LIGHTBOX ── */
+  (function() {
+    const lb = document.createElement('div');
+    lb.id = 'lightbox';
+    lb.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:99999;align-items:center;justify-content:center;cursor:zoom-out;';
+    lb.innerHTML = '<img id="lbImg" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,0.5);"/>';
+    document.body.appendChild(lb);
+    lb.addEventListener('click', () => { lb.style.display = 'none'; });
+
+    function openLightbox(src) {
+      document.getElementById('lbImg').src = src;
+      lb.style.display = 'flex';
+    }
+
+    document.addEventListener('click', e => {
+      if (e.target.tagName === 'IMG' && e.target.closest('.xai-img-grid')) {
+        openLightbox(e.target.src);
+      }
+    });
+  })();
+
+  /* ── ERROR TOAST ── */
+  function showError(msg) {
+    const div = document.createElement('div');
+    div.style.cssText = `position:fixed;top:2rem;left:50%;transform:translateX(-50%);background:#fee2e2;color:#dc2626;padding:1rem 2rem;border-radius:8px;border-left:4px solid #dc2626;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:10000;max-width:500px;`;
+    div.innerHTML = `<strong>Analysis Failed</strong><br><span style="font-size:0.9rem;">${msg}</span>
+      <button onclick="this.parentElement.remove()" style="margin-left:1rem;padding:0.3rem 0.8rem;border:none;background:#dc2626;color:white;border-radius:4px;cursor:pointer;">Dismiss</button>`;
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 5000);
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>History — OncoVision AI</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="style.css"/>
+  <style>
+    .page-header { padding: 3.5rem 0 2.5rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+    .page-header h1 { font-family: var(--font-serif); font-size: 2.6rem; margin-bottom: 0.6rem; }
+    .page-header p { color: var(--text-muted); font-size: 1rem; max-width: 560px; }
+
+    /* ── CONTROLS ── */
+    .controls-bar {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+      align-items: center; margin-bottom: 1rem;
+    }
+    .search-input {
+      flex: 1; min-width: 180px;
+      padding: 0.65rem 1rem;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.9rem; font-family: sans-serif; outline: none; background: white;
+    }
+    .search-input:focus { border-color: var(--pink); }
+    .filter-btn {
+      padding: 0.65rem 1.1rem; border: 1px solid var(--border);
+      border-radius: var(--radius); background: white;
+      font-size: 0.85rem; cursor: pointer; font-family: sans-serif;
+      color: var(--text-muted); transition: all 0.2s;
+    }
+    .filter-btn.active { background: var(--pink); color: white; border-color: var(--pink); }
+    .filter-btn:hover:not(.active) { border-color: var(--pink); color: var(--pink); }
+
+    .filter-select {
+      padding: 0.65rem 0.9rem; border: 1px solid var(--border);
+      border-radius: var(--radius); background: white;
+      font-size: 0.85rem; font-family: sans-serif; outline: none; cursor: pointer;
+    }
+    .filter-select:focus { border-color: var(--pink); }
+
+    .date-input {
+      padding: 0.62rem 0.8rem; border: 1px solid var(--border);
+      border-radius: var(--radius); background: white;
+      font-size: 0.85rem; font-family: sans-serif; outline: none;
+    }
+    .date-input:focus { border-color: var(--pink); }
+
+    .controls-row2 {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+      align-items: center; margin-bottom: 1.5rem;
+    }
+    .controls-row2 label { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; }
+
+    .total-count { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; margin-left: auto; }
+
+    .btn--outline {
+      padding: 0.65rem 1.1rem; border: 1px solid var(--pink);
+      border-radius: var(--radius); background: white; color: var(--pink);
+      font-size: 0.85rem; cursor: pointer; font-family: sans-serif;
+      font-weight: 600; transition: all 0.2s;
+    }
+    .btn--outline:hover { background: var(--pink); color: white; }
+
+    .btn--danger {
+      padding: 0.65rem 1.1rem; border: 1px solid #dc2626;
+      border-radius: var(--radius); background: white; color: #dc2626;
+      font-size: 0.85rem; cursor: pointer; font-family: sans-serif;
+      font-weight: 600; transition: all 0.2s; display: none;
+    }
+    .btn--danger:hover { background: #dc2626; color: white; }
+    .btn--danger.visible { display: inline-block; }
+
+    /* ── TABLE ── */
+    .history-table-wrap {
+      background: white; border-radius: var(--radius-lg);
+      border: 1px solid var(--border); overflow: hidden; margin-bottom: 1.5rem;
+    }
+    .history-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    .history-table th {
+      text-align: left; padding: 0.9rem 1rem;
+      background: var(--pink-light); font-size: 0.76rem;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      font-weight: 600; color: var(--text); border-bottom: 2px solid var(--border);
+      cursor: pointer; user-select: none; white-space: nowrap;
+    }
+    .history-table th:hover { color: var(--pink); }
+    .history-table th .sort-icon { margin-left: 0.3rem; opacity: 0.4; font-size: 0.7rem; }
+    .history-table th.sorted .sort-icon { opacity: 1; color: var(--pink); }
+    .history-table td {
+      padding: 0.9rem 1rem; border-bottom: 1px solid var(--border);
+      color: var(--text-muted); vertical-align: middle;
+    }
+    .history-table tr:last-child td { border-bottom: none; }
+    .history-table tbody tr { cursor: pointer; transition: background 0.15s; }
+    .history-table tbody tr:hover td { background: #fdf8fa; }
+    .history-table tbody tr.selected td { background: #fff0f4; }
+
+    .cb-col { width: 36px; text-align: center; }
+    .cb-col input[type=checkbox] { cursor: pointer; accent-color: var(--pink); width: 15px; height: 15px; }
+
+    .badge-malignant {
+      display: inline-block; padding: 0.2rem 0.65rem;
+      background: #fee2e2; color: #dc2626;
+      border-radius: 100px; font-size: 0.78rem; font-weight: 600;
+    }
+    .badge-benign {
+      display: inline-block; padding: 0.2rem 0.65rem;
+      background: #dcfce7; color: #16a34a;
+      border-radius: 100px; font-size: 0.78rem; font-weight: 600;
+    }
+    .conf-bar {
+      width: 70px; height: 5px; background: var(--border);
+      border-radius: 6px; overflow: hidden; display: inline-block;
+      vertical-align: middle; margin-right: 0.4rem;
+    }
+    .conf-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg, var(--pink), var(--rose)); }
+    .conf-fill.benign { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .patient-name { font-weight: 500; color: var(--text); }
+    .timestamp { font-family: monospace; font-size: 0.8rem; }
+    .notes-preview { font-size: 0.8rem; color: var(--text-muted); font-style: italic; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .action-btns { display: flex; gap: 0.4rem; }
+    .action-btn {
+      padding: 0.3rem 0.6rem; border-radius: var(--radius);
+      font-size: 0.75rem; font-weight: 600; cursor: pointer;
+      border: 1px solid; font-family: sans-serif; transition: all 0.15s;
+    }
+    .action-btn.edit { border-color: var(--pink); color: var(--pink); background: white; }
+    .action-btn.edit:hover { background: var(--pink); color: white; }
+    .action-btn.del { border-color: #dc2626; color: #dc2626; background: white; }
+    .action-btn.del:hover { background: #dc2626; color: white; }
+
+    /* ── PAGINATION ── */
+    .pagination {
+      display: flex; gap: 0.4rem; align-items: center;
+      justify-content: center; padding: 1rem 0 3rem;
+    }
+    .page-btn {
+      width: 34px; height: 34px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: white;
+      font-size: 0.85rem; cursor: pointer; font-family: sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--pink); color: var(--pink); }
+    .page-btn.active { background: var(--pink); color: white; border-color: var(--pink); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .page-info { font-size: 0.83rem; color: var(--text-muted); padding: 0 0.5rem; }
+
+    /* ── EMPTY / LOADING ── */
+    .empty-state { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+    .empty-state p { font-size: 0.95rem; margin-top: 0.5rem; }
+    .loading-wrap { text-align: center; padding: 4rem; color: var(--text-muted); font-size: 0.9rem; }
+    .not-logged-in { text-align: center; padding: 4rem 2rem; color: var(--text-muted); }
+    .not-logged-in h2 { font-family: var(--font-serif); font-size: 1.6rem; margin-bottom: 0.75rem; color: var(--text); }
+    .not-logged-in p { margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .not-logged-in a {
+      display: inline-block; padding: 0.8rem 1.8rem;
+      background: var(--pink); color: white; border-radius: var(--radius);
+      text-decoration: none; font-weight: 600; font-size: 0.92rem;
+    }
+
+    /* ── MODALS ── */
+    .modal {
+      display: none; position: fixed; z-index: 1000;
+      left: 0; top: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.75); overflow: auto;
+    }
+    .modal-content {
+      background: white; margin: 3% auto; padding: 2rem;
+      max-width: 900px; border-radius: var(--radius-lg); position: relative;
+    }
+    .modal-content.sm { max-width: 480px; }
+    .modal-close {
+      position: absolute; top: 1.2rem; right: 1.5rem;
+      font-size: 1.8rem; cursor: pointer; color: var(--text-muted); line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+    .modal-title { font-family: var(--font-serif); font-size: 1.5rem; margin-bottom: 1.5rem; }
+
+    .modal-info {
+      margin: 1.5rem 0; padding: 1.2rem 1.4rem;
+      background: var(--pink-light); border-radius: var(--radius);
+    }
+    .modal-info p { margin: 0.4rem 0; font-size: 0.92rem; }
+    .modal-info strong { color: var(--text); }
+
+    .modal-images {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 1.2rem; margin-top: 1.5rem;
+    }
+    .modal-images > div h3 { font-family: var(--font-serif); font-size: 1rem; margin-bottom: 0.6rem; color: var(--text); }
+    .modal-images img {
+      width: 100%; border-radius: var(--radius);
+      border: 1px solid var(--border); background: #f9f9f9;
+      cursor: zoom-in; transition: opacity 0.2s;
+    }
+    .modal-images img:hover { opacity: 0.85; }
+
+    /* Edit modal form */
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label {
+      display: block; font-size: 0.78rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--text-muted); margin-bottom: 0.4rem;
+    }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 0.65rem 0.9rem;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.9rem; font-family: sans-serif; outline: none;
+      background: white; color: var(--text); box-sizing: border-box;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: var(--pink); }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+
+    .modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+    .btn-primary {
+      padding: 0.7rem 1.4rem; background: var(--pink); color: white;
+      border: none; border-radius: var(--radius); font-size: 0.9rem;
+      font-weight: 600; cursor: pointer; font-family: sans-serif;
+    }
+    .btn-primary:hover { background: #b05568; }
+    .btn-cancel {
+      padding: 0.7rem 1.4rem; background: white; color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 0.9rem; cursor: pointer; font-family: sans-serif;
+    }
+    .btn-cancel:hover { border-color: var(--text-muted); }
+    .btn-del-confirm {
+      padding: 0.7rem 1.4rem; background: #dc2626; color: white;
+      border: none; border-radius: var(--radius); font-size: 0.9rem;
+      font-weight: 600; cursor: pointer; font-family: sans-serif;
+    }
+    .btn-del-confirm:hover { background: #b91c1c; }
+
+    .confirm-msg { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .confirm-msg strong { color: var(--text); }
+
+    .msg-toast {
+      position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+      padding: 0.9rem 1.4rem; border-radius: var(--radius);
+      font-size: 0.88rem; font-family: sans-serif;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: none; max-width: 320px;
+    }
+    .msg-toast.success { background: #f0fdf4; color: #16a34a; border-left: 3px solid #16a34a; }
+    .msg-toast.error   { background: #fff0f2; color: #dc2626; border-left: 3px solid #dc2626; }
+
+    @media (max-width: 768px) {
+      .controls-row2 { flex-direction: column; align-items: stretch; }
+      .history-table th:nth-child(5),
+      .history-table td:nth-child(5),
+      .history-table th:nth-child(7),
+      .history-table td:nth-child(7) { display: none; }
+      .modal-images { grid-template-columns: 1fr; }
+    }
+  </style>
+  <style>body{visibility:hidden;}</style>
+  <script>
+    function _authGuard() {
+      fetch('/api/check-auth', {credentials:'include', cache:'no-store'})
+        .then(r => r.json())
+        .then(d => {
+          if (!d.logged_in) { window.location.replace('/login'); }
+          else { document.body.style.visibility = 'visible'; }
+        })
+        .catch(() => { window.location.replace('/login'); });
+    }
+    _authGuard();
+    window.addEventListener('pageshow', function(e) { if (e.persisted) location.reload(); });
+  </script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">OncoVision AI</a>
+    <ul class="nav__links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li><a href="history.html" class="active">History</a></li>
+      <li data-auth="true"><a href="analytics.html">Analytics</a></li>
+      <li data-auth="true"><a href="profile.html">Profile</a></li>
+      <ul id="dynamicNav" style="display:contents;"></ul>
+      <li><a href="analyze.html" class="nav__cta">Analyze Image</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="container">
+  <div class="page-header">
+    <h1>Prediction History</h1>
+    <p id="headerSubtitle">Sign in to view your prediction records.</p>
+  </div>
+
+  <!-- NOT LOGGED IN -->
+  <div id="notLoggedIn" class="history-table-wrap" style="display:none;">
+    <div class="not-logged-in">
+      <h2>You are not signed in</h2>
+      <p>Sign in to view your prediction history and track cases over time.</p>
+      <a href="/login">Sign In</a>
+    </div>
+  </div>
+
+  <!-- LOGGED IN -->
+  <div id="loggedInSection" style="display:none;">
+
+    <!-- Row 1: search + type filters + actions -->
+    <div class="controls-bar">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search patient name or filename…" oninput="applyFilters()"/>
+      <button class="filter-btn active" onclick="setTypeFilter('all', this)">All</button>
+      <button class="filter-btn" onclick="setTypeFilter('malignant', this)">Malignant</button>
+      <button class="filter-btn" onclick="setTypeFilter('benign', this)">Benign</button>
+      <button class="btn--danger" id="bulkDeleteBtn" onclick="openBulkDelete()">Delete Selected (<span id="selectedCount">0</span>)</button>
+      <button class="btn--outline" onclick="exportToCSV()">Export CSV</button>
+      <span class="total-count" id="totalCount"></span>
+    </div>
+
+    <!-- Row 2: date range + confidence + sort -->
+    <div class="controls-row2">
+      <label>From</label>
+      <input type="date" class="date-input" id="dateFrom" onchange="applyFilters()"/>
+      <label>To</label>
+      <input type="date" class="date-input" id="dateTo" onchange="applyFilters()"/>
+      <label>Min confidence</label>
+      <select class="filter-select" id="confFilter" onchange="applyFilters()">
+        <option value="0">Any</option>
+        <option value="0.5">≥ 50%</option>
+        <option value="0.7">≥ 70%</option>
+        <option value="0.9">≥ 90%</option>
+      </select>
+      <label>Sort by</label>
+      <select class="filter-select" id="sortBy" onchange="applyFilters()">
+        <option value="date_desc">Date (newest)</option>
+        <option value="date_asc">Date (oldest)</option>
+        <option value="conf_desc">Confidence (high→low)</option>
+        <option value="conf_asc">Confidence (low→high)</option>
+        <option value="pred">Prediction type</option>
+      </select>
+      <button class="filter-btn" onclick="clearFilters()" style="margin-left:auto;">Clear Filters</button>
+    </div>
+
+    <div class="history-table-wrap">
+      <div class="loading-wrap" id="loadingWrap">Loading records…</div>
+      <table class="history-table" id="historyTable" style="display:none;">
+        <thead>
+          <tr>
+            <th class="cb-col"><input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)"/></th>
+            <th>Patient Name</th>
+            <th>Result</th>
+            <th>Confidence</th>
+            <th>Image File</th>
+            <th>Notes</th>
+            <th>Date and Time</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <strong>No records found</strong>
+        <p>No predictions match your filters. Try adjusting your search.</p>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" id="pagination"></div>
+
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div id="detailModal" class="modal">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal('detailModal')">&times;</span>
+    <div class="modal-title">Prediction Details</div>
+    <div class="modal-info">
+      <p><strong>Patient:</strong> <span id="modalPatient"></span></p>
+      <p><strong>Result:</strong> <span id="modalResult"></span></p>
+      <p><strong>Confidence:</strong> <span id="modalConfidence"></span></p>
+      <p><strong>Date:</strong> <span id="modalDate"></span></p>
+      <p id="modalNotesRow" style="display:none;"><strong>Notes:</strong> <span id="modalNotes"></span></p>
+    </div>
+    <div class="modal-images">
+      <div><h3>Original Image</h3><img id="modalOriginal" src="" alt="Original"/></div>
+      <div><h3>Grad-CAM</h3><img id="modalGradcam" src="" alt="Grad-CAM"/></div>
+      <div><h3>SHAP</h3><img id="modalShap" src="" alt="SHAP"/></div>
+    </div>
+    <!-- PDF Export Button -->
+    <div style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:0.75rem;">
+      <button class="btn--outline" id="modalEditBtn" onclick="openEditFromModal()" style="font-size:0.85rem; padding:0.55rem 1.1rem;">✏️ Edit</button>
+      <button class="btn" id="pdfExportBtn" onclick="exportPDF()" style="font-size:0.85rem; padding:0.55rem 1.4rem; background:var(--pink);">
+        ↓ Export PDF Report
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div id="editModal" class="modal">
+  <div class="modal-content sm">
+    <span class="modal-close" onclick="closeModal('editModal')">&times;</span>
+    <div class="modal-title">Edit Prediction</div>
+    <input type="hidden" id="editPredId"/>
+    <div class="form-group">
+      <label>Patient Name</label>
+      <input type="text" id="editPatientName" placeholder="Patient name"/>
+    </div>
+    <div class="form-group">
+      <label>Notes / Comments</label>
+      <textarea id="editNotes" placeholder="Add clinical notes or comments…"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div id="deleteModal" class="modal">
+  <div class="modal-content sm">
+    <span class="modal-close" onclick="closeModal('deleteModal')">&times;</span>
+    <div class="modal-title">Delete Prediction</div>
+    <p class="confirm-msg">Are you sure you want to delete the prediction for <strong id="deletePatientName"></strong>? This cannot be undone.</p>
+    <input type="hidden" id="deletePredId"/>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn-del-confirm" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK DELETE CONFIRM MODAL -->
+<div id="bulkDeleteModal" class="modal">
+  <div class="modal-content sm">
+    <span class="modal-close" onclick="closeModal('bulkDeleteModal')">&times;</span>
+    <div class="modal-title">Delete Selected</div>
+    <p class="confirm-msg">Delete <strong id="bulkDeleteCount"></strong> selected prediction(s)? This cannot be undone.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('bulkDeleteModal')">Cancel</button>
+      <button class="btn-del-confirm" onclick="confirmBulkDelete()">Delete All</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="msg-toast"></div>
+
+<footer class="footer">
+  <strong>OncoVision AI</strong> — Explainable Breast Cancer Classification System<br>
+</footer>
+
+<script>
+  const API = '';
+  let allLogs = [];
+  let filtered = [];
+  let typeFilter = 'all';
+  let currentPage = 1;
+  const PAGE_SIZE = 15;
+  let selectedIds = new Set();
+
+  // ── INIT ──────────────────────────────────────────────────────────────
+  async function loadHistory() {
+    try {
+      const authResp = await fetch(`${API}/api/check-auth`, { credentials: 'include' });
+      const authData = await authResp.json();
+      const dynNav = document.getElementById('dynamicNav');
+
+      if (authData.logged_in && authData.is_admin) {
+        dynNav.innerHTML = `
+          <li><a href="audit.html" style="font-size:0.82rem;color:var(--text-muted);">Audit Log</a></li>
+          <li><a href="/admin" style="font-size:0.82rem;color:var(--text-muted);">Admin Dashboard</a></li>
+          <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>`;
+        const name = authData.full_name || authData.username;
+        document.getElementById('headerSubtitle').textContent =
+          `Signed in as ${name}${authData.role ? ' · ' + authData.role : ''}. Showing your prediction records.`;
+      } else if (authData.logged_in) {
+        const name = authData.full_name || authData.username;
+        dynNav.innerHTML = `
+          <li><a href="profile.html" style="font-size:0.82rem;color:var(--text-muted);">${name}</a></li>
+          <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>`;
+        document.getElementById('headerSubtitle').textContent =
+          `Signed in as ${name}${authData.role ? ' · ' + authData.role : ''}. Showing your prediction records.`;
+      } else {
+        dynNav.innerHTML = `<li><a href="/login" style="font-size:0.82rem;color:var(--text-muted);">Sign in</a></li>`;
+        document.getElementById('notLoggedIn').style.display = 'block';
+        return;
+      }
+    } catch(e) {
+      document.getElementById('notLoggedIn').style.display = 'block';
+      return;
+    }
+
+    document.getElementById('loggedInSection').style.display = 'block';
+
+    try {
+      const resp = await fetch(`${API}/api/logs`, { credentials: 'include' });
+      if (resp.status === 401) {
+        document.getElementById('loggedInSection').style.display = 'none';
+        document.getElementById('notLoggedIn').style.display = 'block';
+        return;
+      }
+      const data = await resp.json();
+      allLogs = data.logs || [];
+      document.getElementById('loadingWrap').style.display = 'none';
+      document.getElementById('historyTable').style.display = 'table';
+      applyFilters();
+    } catch(err) {
+      document.getElementById('loadingWrap').textContent = 'Could not load history. Make sure the Flask server is running.';
+    }
+  }
+
+  // ── FILTERS + SORT ────────────────────────────────────────────────────
+  function setTypeFilter(type, btn) {
+    typeFilter = type;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const query   = document.getElementById('searchInput').value.toLowerCase();
+    const dateFrom = document.getElementById('dateFrom').value;
+    const dateTo   = document.getElementById('dateTo').value;
+    const minConf  = parseFloat(document.getElementById('confFilter').value);
+    const sortBy   = document.getElementById('sortBy').value;
+
+    filtered = allLogs.filter(l => {
+      if (typeFilter === 'malignant' && l.prediction !== 'Malignant') return false;
+      if (typeFilter === 'benign'    && l.prediction !== 'Benign')    return false;
+      if (query && !(
+        (l.patient_name || '').toLowerCase().includes(query) ||
+        (l.filename     || '').toLowerCase().includes(query)
+      )) return false;
+      if (minConf && parseFloat(l.confidence) < minConf) return false;
+      if (dateFrom && l.created_at < dateFrom) return false;
+      if (dateTo   && l.created_at > dateTo + ' 23:59:59') return false;
+      return true;
+    });
+
+    // Sort
+    filtered.sort((a, b) => {
+      if (sortBy === 'date_desc') return (b.created_at || '').localeCompare(a.created_at || '');
+      if (sortBy === 'date_asc')  return (a.created_at || '').localeCompare(b.created_at || '');
+      if (sortBy === 'conf_desc') return parseFloat(b.confidence) - parseFloat(a.confidence);
+      if (sortBy === 'conf_asc')  return parseFloat(a.confidence) - parseFloat(b.confidence);
+      if (sortBy === 'pred')      return (a.prediction || '').localeCompare(b.prediction || '');
+      return 0;
+    });
+
+    currentPage = 1;
+    selectedIds.clear();
+    updateBulkBtn();
+    renderPage();
+  }
+
+  function clearFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('dateFrom').value    = '';
+    document.getElementById('dateTo').value      = '';
+    document.getElementById('confFilter').value  = '0';
+    document.getElementById('sortBy').value      = 'date_desc';
+    typeFilter = 'all';
+    document.querySelectorAll('.filter-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+    applyFilters();
+  }
+
+  // ── RENDER ────────────────────────────────────────────────────────────
+  function renderPage() {
+    const tbody  = document.getElementById('tableBody');
+    const empty  = document.getElementById('emptyState');
+    const total  = document.getElementById('totalCount');
+    const table  = document.getElementById('historyTable');
+
+    total.textContent = filtered.length + ' record' + (filtered.length !== 1 ? 's' : '');
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      table.style.display = 'none';
+      renderPagination();
+      return;
+    }
+
+    empty.style.display = 'none';
+    table.style.display = 'table';
+
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const page  = filtered.slice(start, start + PAGE_SIZE);
+
+    tbody.innerHTML = page.map(log => {
+      const isMal  = log.prediction === 'Malignant';
+      const conf   = parseFloat(log.confidence) * 100;
+      const badge  = isMal
+        ? '<span class="badge-malignant">Malignant</span>'
+        : '<span class="badge-benign">Benign</span>';
+      const bar    = `<div class="conf-bar"><div class="conf-fill ${isMal ? '' : 'benign'}" style="width:${conf.toFixed(0)}%"></div></div>`;
+      const chk    = selectedIds.has(log.prediction_id) ? 'checked' : '';
+      const notes  = log.notes ? `<span class="notes-preview">${escapeHtml(log.notes)}</span>` : '<span style="color:#ccc;font-size:0.78rem;">—</span>';
+
+      return `<tr class="${selectedIds.has(log.prediction_id) ? 'selected' : ''}" onclick="handleRowClick(event, '${log.prediction_id}')">
+        <td class="cb-col" onclick="event.stopPropagation()">
+          <input type="checkbox" ${chk} onchange="toggleSelect('${log.prediction_id}', this)"/>
+        </td>
+        <td class="patient-name">${escapeHtml(log.patient_name || 'Unknown')}</td>
+        <td>${badge}</td>
+        <td>${bar}${conf.toFixed(1)}%</td>
+        <td>${escapeHtml(log.filename || '')}</td>
+        <td>${notes}</td>
+        <td class="timestamp">${escapeHtml(log.created_at || '')}</td>
+        <td onclick="event.stopPropagation()">
+          <div class="action-btns">
+            <button class="action-btn edit" onclick="openEdit('${log.prediction_id}', '${escapeJs(log.patient_name || '')}', '${escapeJs(log.notes || '')}')">Edit</button>
+            <button class="action-btn del"  onclick="openDelete('${log.prediction_id}', '${escapeJs(log.patient_name || 'Unknown')}')">Delete</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+
+    renderPagination();
+  }
+
+  function renderPagination() {
+    const total = Math.ceil(filtered.length / PAGE_SIZE);
+    const pg    = document.getElementById('pagination');
+    if (total <= 1) { pg.innerHTML = ''; return; }
+
+    let html = `<button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || Math.abs(i - currentPage) <= 1) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+      } else if (Math.abs(i - currentPage) === 2) {
+        html += `<span class="page-info">…</span>`;
+      }
+    }
+    html += `<button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === total ? 'disabled' : ''}>›</button>`;
+    html += `<span class="page-info">Page ${currentPage} of ${total}</span>`;
+    pg.innerHTML = html;
+  }
+
+  function goPage(n) {
+    const total = Math.ceil(filtered.length / PAGE_SIZE);
+    if (n < 1 || n > total) return;
+    currentPage = n;
+    renderPage();
+    window.scrollTo(0, 0);
+  }
+
+  // ── SELECTION ─────────────────────────────────────────────────────────
+  function toggleSelect(id, cb) {
+    if (cb.checked) selectedIds.add(id);
+    else selectedIds.delete(id);
+    const row = cb.closest('tr');
+    row.classList.toggle('selected', cb.checked);
+    updateBulkBtn();
+  }
+
+  function toggleSelectAll(cb) {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const page  = filtered.slice(start, start + PAGE_SIZE);
+    page.forEach(log => {
+      if (cb.checked) selectedIds.add(log.prediction_id);
+      else selectedIds.delete(log.prediction_id);
+    });
+    renderPage();
+    updateBulkBtn();
+  }
+
+  function updateBulkBtn() {
+    const btn = document.getElementById('bulkDeleteBtn');
+    document.getElementById('selectedCount').textContent = selectedIds.size;
+    btn.classList.toggle('visible', selectedIds.size > 0);
+  }
+
+  function handleRowClick(e, id) {
+    // Only open detail modal if not clicking checkbox or action buttons
+    if (e.target.type === 'checkbox' || e.target.classList.contains('action-btn')) return;
+    viewDetail(id);
+  }
+
+  // ── DETAIL MODAL ──────────────────────────────────────────────────────
+  let currentDetailId = null;
+
+  async function viewDetail(predictionId) {
+    if (!predictionId) return;
+    currentDetailId = predictionId;
+    try {
+      const resp = await fetch(`${API}/api/prediction/${predictionId}`, { credentials: 'include' });
+      if (!resp.ok) throw new Error();
+      const data = await resp.json();
+
+      document.getElementById('modalPatient').textContent    = data.patient_name || 'Unknown';
+      document.getElementById('modalResult').textContent     = data.prediction;
+      document.getElementById('modalConfidence').textContent = (data.confidence * 100).toFixed(1) + '%';
+      document.getElementById('modalDate').textContent       = data.created_at;
+
+      if (data.notes) {
+        document.getElementById('modalNotes').textContent    = data.notes;
+        document.getElementById('modalNotesRow').style.display = 'block';
+      } else {
+        document.getElementById('modalNotesRow').style.display = 'none';
+      }
+
+      const base = `${API}/history_images/`;
+      document.getElementById('modalOriginal').src = data.original_image ? base + data.original_image : '';
+      document.getElementById('modalGradcam').src  = data.gradcam_image  ? base + data.gradcam_image  : '';
+      document.getElementById('modalShap').src     = data.shap_image     ? base + data.shap_image     : '';
+
+      openModal('detailModal');
+    } catch(e) {
+      showToast('Could not load prediction details.', 'error');
+    }
+  }
+
+  // ── EDIT MODAL ────────────────────────────────────────────────────────
+  function openEdit(id, patientName, notes) {
+    document.getElementById('editPredId').value      = id;
+    document.getElementById('editPatientName').value = patientName;
+    document.getElementById('editNotes').value       = notes;
+    openModal('editModal');
+  }
+
+  async function saveEdit() {
+    const id          = document.getElementById('editPredId').value;
+    const patient_name = document.getElementById('editPatientName').value.trim();
+    const notes       = document.getElementById('editNotes').value.trim();
+
+    if (!patient_name) { showToast('Patient name cannot be empty.', 'error'); return; }
+
+    try {
+      const resp = await fetch(`${API}/api/prediction/${id}/update`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ patient_name, notes })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        const log = allLogs.find(l => l.prediction_id === id);
+        if (log) { log.patient_name = patient_name; log.notes = notes; }
+        closeModal('editModal');
+        applyFilters();
+        showToast('Prediction updated successfully.', 'success');
+      } else {
+        showToast(data.error || 'Update failed.', 'error');
+      }
+    } catch(e) {
+      showToast('Could not save changes.', 'error');
+    }
+  }
+
+  // ── DELETE MODAL ──────────────────────────────────────────────────────
+  function openDelete(id, patientName) {
+    document.getElementById('deletePredId').value        = id;
+    document.getElementById('deletePatientName').textContent = patientName;
+    openModal('deleteModal');
+  }
+
+  async function confirmDelete() {
+    const id = document.getElementById('deletePredId').value;
+    try {
+      const resp = await fetch(`${API}/api/prediction/${id}/delete`, {
+        method: 'DELETE', credentials: 'include'
+      });
+      const data = await resp.json();
+      if (data.success) {
+        allLogs = allLogs.filter(l => l.prediction_id !== id);
+        selectedIds.delete(id);
+        closeModal('deleteModal');
+        applyFilters();
+        showToast('Prediction deleted.', 'success');
+      } else {
+        showToast(data.error || 'Delete failed.', 'error');
+      }
+    } catch(e) {
+      showToast('Could not delete prediction.', 'error');
+    }
+  }
+
+  // ── BULK DELETE ───────────────────────────────────────────────────────
+  function openBulkDelete() {
+    document.getElementById('bulkDeleteCount').textContent = selectedIds.size;
+    openModal('bulkDeleteModal');
+  }
+
+  async function confirmBulkDelete() {
+    const ids = Array.from(selectedIds);
+    try {
+      const resp = await fetch(`${API}/api/predictions/bulk-delete`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prediction_ids: ids })
+      });
+      const data = await resp.json();
+      if (data.success) {
+        allLogs = allLogs.filter(l => !ids.includes(l.prediction_id));
+        selectedIds.clear();
+        closeModal('bulkDeleteModal');
+        applyFilters();
+        showToast(`${data.deleted} prediction(s) deleted.`, 'success');
+      } else {
+        showToast(data.error || 'Bulk delete failed.', 'error');
+      }
+    } catch(e) {
+      showToast('Could not delete predictions.', 'error');
+    }
+  }
+
+  // ── EXPORT ────────────────────────────────────────────────────────────
+  function exportToCSV() {
+    const rows = [
+      ['Patient Name', 'Result', 'Confidence', 'Image File', 'Notes', 'Date'],
+      ...filtered.map(log => [
+        log.patient_name || 'Unknown',
+        log.prediction,
+        (parseFloat(log.confidence) * 100).toFixed(1) + '%',
+        log.filename || '',
+        log.notes || '',
+        log.created_at || ''
+      ])
+    ].map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+
+    const blob = new Blob([rows], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `oncovision_history_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── UTILS ─────────────────────────────────────────────────────────────
+  function openModal(id)  { document.getElementById(id).style.display = 'block'; }
+  function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+  window.onclick = e => {
+    ['detailModal','editModal','deleteModal','bulkDeleteModal'].forEach(id => {
+      if (e.target === document.getElementById(id)) closeModal(id);
+    });
+  };
+
+  function showToast(msg, type) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className   = `msg-toast ${type}`;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 3500);
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function escapeJs(str) {
+    return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  }
+
+  // ── PDF EXPORT ────────────────────────────────────────────────────────
+  async function exportPDF() {
+    if (!currentDetailId) return;
+    const btn = document.getElementById('pdfExportBtn');
+    const orig = btn.textContent;
+    btn.textContent = 'Generating…';
+    btn.disabled = true;
+    try {
+      const resp = await fetch(`${API}/api/prediction/${currentDetailId}/pdf`, {
+        credentials: 'include'
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || 'PDF generation failed');
+      }
+      // Trigger download
+      const blob = await resp.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      const cd = resp.headers.get('content-disposition') || '';
+      const match = cd.match(/filename="?([^"]+)"?/);
+      a.download = match ? match[1] : `OncoVision_Report_${currentDetailId.slice(0,8)}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('PDF report downloaded.', 'success');
+    } catch(e) {
+      showToast(e.message || 'Could not generate PDF.', 'error');
+    } finally {
+      btn.textContent = orig;
+      btn.disabled = false;
+    }
+  }
+
+  // ── OPEN EDIT FROM DETAIL MODAL ───────────────────────────────────────
+  function openEditFromModal() {
+    if (!currentDetailId) return;
+    closeModal('detailModal');
+    // Find the row with this id and trigger its edit
+    const row = document.querySelector(`[data-id="${currentDetailId}"]`);
+    if (row) {
+      const editBtn = row.querySelector('[onclick*="openEdit"]');
+      if (editBtn) { editBtn.click(); return; }
+    }
+    // Fallback: open edit modal directly
+    openEdit(currentDetailId,
+      document.getElementById('modalPatient').textContent,
+      document.getElementById('modalNotes').textContent
+    );
+  }
+
+  loadHistory();
+
+  /* ── LIGHTBOX ── */
+  (function() {
+    const lb = document.createElement('div');
+    lb.id = 'lightbox';
+    lb.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:99999;align-items:center;justify-content:center;cursor:zoom-out;';
+    lb.innerHTML = '<img id="lbImg" style="max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:0 0 40px rgba(0,0,0,0.5);"/>';
+    document.body.appendChild(lb);
+    lb.addEventListener('click', () => { lb.style.display = 'none'; });
+
+    document.addEventListener('click', e => {
+      if (e.target.tagName === 'IMG' && e.target.closest('.modal-images')) {
+        document.getElementById('lbImg').src = e.target.src;
+        lb.style.display = 'flex';
+      }
+    });
+  })();
+</script>
+<script src="darkmode.js"></script>
+<script>
+  fetch('/api/check-auth', {credentials:'include'})
+    .then(r => r.json())
+    .then(d => { if (!d.logged_in) window.location.replace('/login'); });
+</script>
+</body>
+</html>

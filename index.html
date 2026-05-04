@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OncoVision AI — Explainable Cancer Classification</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="darkmode.js"></script>
+  <style>
+    /* ── HERO ── */
+    .hero {
+      min-height: calc(100vh - var(--nav-h));
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      gap: 4rem;
+      padding: 5rem 0;
+    }
+
+    .hero__tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--pink);
+      background: var(--pink-light);
+      padding: 0.4rem 1rem;
+      border-radius: 100px;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero__tag::before {
+      content: '';
+      width: 6px; height: 6px;
+      background: var(--pink);
+      border-radius: 50%;
+      animation: pulse 1.8s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    .hero__title {
+      font-family: var(--font-serif);
+      font-size: clamp(2.8rem, 5vw, 4.2rem);
+      line-height: 1.08;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.5rem;
+      color: var(--text);
+    }
+
+    .hero__title em {
+      font-style: italic;
+      color: var(--pink);
+    }
+
+    .hero__body {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      max-width: 480px;
+      margin-bottom: 2.5rem;
+      line-height: 1.75;
+    }
+
+    .hero__actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .hero__visual {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero__img-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .hero__img-wrap img {
+      width: 100%;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      display: block;
+    }
+
+    .hero__badge {
+      position: absolute;
+      bottom: -1.5rem;
+      left: -1.5rem;
+      background: white;
+      border-radius: var(--radius);
+      padding: 1rem 1.4rem;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+    }
+
+    .hero__badge-num {
+      font-family: var(--font-serif);
+      font-size: 1.8rem;
+      color: var(--pink);
+      line-height: 1;
+    }
+
+    .hero__badge-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .hero__badge2 {
+      position: absolute;
+      top: -1rem;
+      right: -1rem;
+      background: var(--bg-dark);
+      color: white;
+      border-radius: var(--radius);
+      padding: 0.9rem 1.2rem;
+      box-shadow: var(--shadow-lg);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .hero__badge2 span {
+      color: var(--pink-muted);
+      display: block;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    /* ── STATS ── */
+    .stats {
+      background: var(--bg-dark);
+      padding: 4rem 0;
+    }
+
+    .stats__grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+    }
+
+    .stat {
+      text-align: center;
+      padding: 2rem;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .stat:last-child { border-right: none; }
+
+    .stat__num {
+      font-family: var(--font-serif);
+      font-size: 2.8rem;
+      color: var(--pink-muted);
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat__label {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .how {
+      padding: 7rem 0;
+    }
+
+    .how__header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 4rem;
+    }
+
+    .how__steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+      position: relative;
+    }
+
+    .how__steps::before {
+      content: '';
+      position: absolute;
+      top: 2.5rem;
+      left: 15%;
+      right: 15%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--pink-light), var(--pink), var(--pink-light));
+      border-radius: 2px;
+    }
+
+    .step {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      position: relative;
+    }
+
+    .step__num {
+      width: 52px; height: 52px;
+      background: var(--pink);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      margin: 0 auto 1.5rem;
+      box-shadow: 0 6px 20px rgba(232,50,106,0.3);
+      position: relative;
+      z-index: 1;
+    }
+
+    .step h3 {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+
+    .step p {
+      font-size: 0.93rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    /* ── FEATURES ── */
+    .features {
+      padding: 7rem 0;
+      background: var(--pink-light);
+    }
+
+    .features__header {
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto 4rem;
+    }
+
+    .features__grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .feat-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      border: 1px solid var(--border);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    .feat-card:hover {
+      transform: translateY(-6px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .feat-card__icon {
+      font-size: 2.2rem;
+      margin-bottom: 1.2rem;
+      display: block;
+    }
+
+    .feat-card h3 {
+      font-family: var(--font-serif);
+      font-size: 1.3rem;
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+
+    .feat-card p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    /* ── CTA BANNER ── */
+    .cta-section {
+      padding: 8rem 0;
+      text-align: center;
+      background: linear-gradient(135deg, var(--pink) 0%, var(--rose) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+
+    .cta-section__inner { position: relative; z-index: 1; }
+
+    .cta-section h2 {
+      font-family: var(--font-serif);
+      font-size: clamp(2rem, 4vw, 3.2rem);
+      color: white;
+      margin-bottom: 1.5rem;
+      line-height: 1.2;
+    }
+
+    .cta-section p {
+      color: rgba(255,255,255,0.8);
+      font-size: 1.05rem;
+      margin-bottom: 2.5rem;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; text-align: center; padding: 3rem 0; }
+      .hero__body { max-width: 100%; }
+      .hero__actions { justify-content: center; }
+      .hero__badge, .hero__badge2 { display: none; }
+      .stats__grid { grid-template-columns: repeat(2, 1fr); }
+      .stat { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.08); }
+      .how__steps { grid-template-columns: 1fr; }
+      .how__steps::before { display: none; }
+      .features__grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav__inner">
+    <a href="index.html" class="nav__logo">OncoVision AI</a>
+    <ul class="nav__links">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="about.html">About</a></li>
+      <li data-auth="true" style="display:none;"><a href="history.html">History</a></li>
+      <li data-auth="true" style="display:none;"><a href="analytics.html">Analytics</a></li>
+      <li data-auth="true" style="display:none;"><a href="profile.html">Profile</a></li>
+      <ul id="dynamicNav" style="display:contents;"></ul>
+      <li><a href="analyze.html" class="nav__cta">Analyze Image</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section>
+  <div class="container">
+    <div class="hero">
+      <div class="hero__content">
+        <div class="hero__tag">AI-Powered · Explainable</div>
+        <h1 class="hero__title">
+          Early detection,<br>
+          <em>made transparent</em>
+        </h1>
+        <p class="hero__body">
+          An explainable AI system for breast cancer histopathology classification. Upload a tissue image and receive an instant prediction with visual explanations showing exactly what the model sees.
+        </p>
+        <div class="hero__actions">
+          <a href="analyze.html" class="btn">Analyze an Image →</a>
+          <a href="about.html" class="btn btn--outline">Learn More</a>
+        </div>
+      </div>
+      <div class="hero__visual">
+        <div class="hero__img-wrap">
+          <img src="https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&q=80&w=800" alt="Histopathology microscope slide"/>
+          <div class="hero__badge">
+            <div class="hero__badge-num">91.3%</div>
+            <div class="hero__badge-label">Malignant Recall</div>
+          </div>
+          <div class="hero__badge2">
+            AUC Score<span>0.851</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="container">
+    <div class="stats__grid">
+      <div class="stat">
+        <div class="stat__num">7,909</div>
+        <div class="stat__label">Training Images</div>
+      </div>
+      <div class="stat">
+        <div class="stat__num">82</div>
+        <div class="stat__label">Unique Patients</div>
+      </div>
+      <div class="stat">
+        <div class="stat__num">0.851</div>
+        <div class="stat__label">Test AUC</div>
+      </div>
+      <div class="stat">
+        <div class="stat__num">4</div>
+        <div class="stat__label">Magnification Levels</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <div class="container">
+    <div class="how__header">
+      <span class="section-label">How It Works</span>
+      <h2 class="section-title">Three steps to a transparent result</h2>
+    </div>
+    <div class="how__steps">
+      <div class="step">
+        <div class="step__num">1</div>
+        <h3>Upload Image</h3>
+        <p>Upload a histopathological slide image in JPG, PNG, or TIFF format from any magnification level.</p>
+      </div>
+      <div class="step">
+        <div class="step__num">2</div>
+        <h3>AI Classification</h3>
+        <p>EfficientNetB0 — fine-tuned on the BreakHis dataset with patient-level splitting — analyses the tissue and generates a prediction with confidence score.</p>
+      </div>
+      <div class="step">
+        <div class="step__num">3</div>
+        <h3>Visual Explanation</h3>
+        <p>Grad-CAM and SHAP heatmaps highlight the specific tissue regions that drove the model's decision, making the prediction interpretable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="container">
+    <div class="features__header">
+      <span class="section-label">Capabilities</span>
+      <h2 class="section-title">Built for transparency and trust</h2>
+    </div>
+    <div class="features__grid">
+      <div class="feat-card">
+        <span class="feat-card__icon"></span>
+        <h3>EfficientNetB0 Classification</h3>
+        <p>Trained with focal loss and patient-level data splitting for clinically honest performance evaluation. Achieves 92.4% recall on malignant cases.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-card__icon"></span>
+        <h3>Grad-CAM Heatmaps</h3>
+        <p>Gradient-weighted Class Activation Maps overlay directly onto the tissue image, showing which cellular regions influenced the classification decision.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-card__icon"></span>
+        <h3>SHAP Explanations</h3>
+        <p>SHapley Additive exPlanations quantify pixel-level feature contributions, providing a complementary view of model reasoning alongside Grad-CAM.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-card__icon"></span>
+        <h3>Confidence Scoring</h3>
+        <p>Each prediction includes a calibrated confidence score. Low-confidence predictions are flagged to encourage manual clinical review.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-card__icon"></span>
+        <h3>Multi-Magnification</h3>
+        <p>Trained and validated across all four BreakHis magnification levels (40X, 100X, 200X, 400X) with consistent recall above 87% at every zoom level.</p>
+      </div>
+      <div class="feat-card">
+        <span class="feat-card__icon"></span>
+        <h3>Patient-Level Validation</h3>
+        <p>Strict patient-level data splitting ensures no patient data appears in both training and testing — the clinically correct evaluation methodology.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-section__inner">
+      <h2>Ready to try the system?</h2>
+      <p>Upload a histopathology image and receive an AI-powered prediction with full visual explanation in seconds.</p>
+      <a href="analyze.html" class="btn" style="background:white; color:var(--pink);">Start Image Analysis →</a>
+    </div>
+  </div>
+</section>
+
+<!-- DISCLAIMER -->
+<div class="container" style="padding: 3rem 2rem;">
+  <div class="disclaimer">
+    <strong>Medical Disclaimer:</strong> This is a research and educational prototype developed for a capstone project. It is <strong>not</strong> a validated medical diagnostic tool and must <strong>not</strong> replace professional pathology review. All predictions require confirmation by a qualified healthcare professional.
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <strong>OncoVision AI</strong> — Explainable Breast Cancer Classification System<br>
+
+</footer>
+
+
+<script>
+  (async function() {
+    try {
+      const r = await fetch('/api/check-auth', { credentials: 'include' });
+      const d = await r.json();
+      const nav = document.getElementById('dynamicNav');
+      const authLinks = document.querySelectorAll('[data-auth="true"]');
+
+      if (d.logged_in) {
+        authLinks.forEach(el => el.style.display = '');
+      }
+
+      if (!nav) return;
+      if (d.logged_in && d.is_admin) {
+        nav.innerHTML = `
+          <li><a href="audit.html" style="font-size:0.82rem;color:var(--text-muted);">Audit Log</a></li>
+          <li><a href="/admin" style="font-size:0.82rem;color:var(--text-muted);">Admin Dashboard</a></li>
+          <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>
+        `;
+      } else if (d.logged_in) {
+        const name = d.full_name || d.username;
+        nav.innerHTML = `
+          <li><a href="profile.html" style="font-size:0.82rem;color:var(--text-muted);">${name}</a></li>
+          <li><a href="/logout" style="font-size:0.82rem;color:var(--text-muted);">Sign out</a></li>
+        `;
+      } else {
+        nav.innerHTML = `
+          <li><a href="/login" style="font-size:0.82rem;color:var(--text-muted);">Sign in</a></li>
+        `;
+      }
+    } catch(e) {}
+  })();
+</script>
+
+</body>
+</html>

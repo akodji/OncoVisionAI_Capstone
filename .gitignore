@@ -1,0 +1,31 @@
+# Secrets
+.env
+
+# Large model and binary files
+*.keras
+*.h5
+shap_background.npy
+
+# Database and user data
+*.db
+*.sqlite
+users.csv
+prediction_log.csv
+
+# Generated prediction images
+history_images/
+
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
